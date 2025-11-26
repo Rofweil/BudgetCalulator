@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Home - Budget Dashboard</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f2faf3;
+        margin: 0;
+        padding: 20px;
+    }
+
+    .container {
+        max-width: 900px;
+        margin: auto;
+        background: white;
+        padding: 25px;
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
+
+    h2 {
+        text-align: center;
+        color: #2c7a3f;
+        margin-bottom: 20px;
+        font-size: 26px;
+    }
+
+    .top-buttons {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    button {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        color: white;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        opacity: 0.85;
+        transform: scale(0.98);
+    }
+
+    .resetHome { background: #f6a03f; }
+    .resetAll { background: #e44545; }
+    .inputData { background: #2e8d47; }
+
+    label {
+        font-weight: bold;
+        margin-top: 10px;
+        display: inline-block;
+        color: #2b7a38;
+    }
+
+    input[type="date"], input[type="number"] {
+        padding: 9px;
+        margin-top: 5px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        border: 1px solid #8dcc90;
+        font-size: 15px;
+        width: 220px;
+    }
+
+    .summary {
+        background: #dff4e3;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        font-size: 16px;
+    }
+
+    .summary p span {
+        font-weight: bold;
+        color: #146b2a;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        font-size: 15px;
+    }
+
+    th, td {
+        border: 1px solid #b5dfbb;
+        padding: 10px;
+        text-align: center;
+    }
+
+    th {
+        background: #bfe6c7;
+        font-weight: bold;
+    }
+
+    .usedBudget {
+        width: 80px;
+        padding: 6px;
+        border: 1px solid #8dcc90;
+        border-radius: 6px;
+    }
+
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Budget Dashboard</h2>
+
+    <div class="top-buttons">
+        <button class="resetHome" onclick="resetHome()">Reset</button>
+        <button class="resetAll" onclick="resetAll()">Reset All</button>
+        <button class="inputData" onclick="goInput()">Input Data</button>
+    </div>
+
+    <label>From:</label>
+    <input type="date" id="dateFrom" onchange="saveDates(); updateDashboard()">
+    <label>To:</label>
+    <input type="date" id="dateTo" onchange="saveDates(); updateDashboard()">
+
+    <div class="summary">
+        <p>Total Income: RM <span id="totalIncome">0</span></p>
+        <p>Total Commitments: RM <span id="totalCommit">0</span></p>
+        <p>Net Income: RM <span id="netIncome">0</span></p>
+        <p>Days Left Until Salary: <span id="daysLeft">0</span></p>
+        <p>Daily Budget (Base): RM <span id="dailyBudget">0</span></p>
+        <p>Remaining Net Income: RM <span id="remainingNet">0</span></p>
+    </div>
+
+    <table id="budgetTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Daily Budget</th>
+                <th>Budget Used</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script>
+// Helper function to get a date string in YYYY-MM-DD format based on local time
+function getLocalISOString(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function loadIncomeCommitments() {
+    const salary = Number(localStorage.getItem("salary") || 0);
+    const partTime = Number(localStorage.getItem("partTime") || 0);
+    const commitments = JSON.parse(localStorage.getItem("commitments") || "{}");
+
+    let totalCommit = 0;
+    if (commitments) {
+        const keys = ["rent","motorcycle","telco","electric","water","shopee"];
+        keys.forEach(k => totalCommit += Number(commitments[k] || 0));
+        // Check if other commitments exist and sum them up
+        if (commitments.other && Array.isArray(commitments.other)) {
+            commitments.other.forEach(o => totalCommit += Number(o.amount || 0));
+        }
+    }
+
+    return { totalIncome: salary + partTime, totalCommit };
+}
+
+function saveUsedBudget(dateStr, value) {
+    const data = JSON.parse(localStorage.getItem("homeBudget") || "{}");
+    data[dateStr] = Number(value);
+    localStorage.setItem("homeBudget", JSON.stringify(data));
+    
+    // Calculate required base for summary update
+    const from = getLocalDate("dateFrom");
+    const to = getLocalDate("dateTo");
+    if (!from || !to || from > to) return;
+
+    const { totalIncome, totalCommit } = loadIncomeCommitments();
+    const net = totalIncome - totalCommit;
+
+    const totalDays = Math.ceil((to - from) / 86400000) + 1;
+    const base = net / totalDays;
+    
+    // *** FIX APPLIED HERE: ONLY UPDATE SUMMARY, DO NOT REDRAW THE TABLE ***
+    updateSummaryOnly(base, from, to);
+    
+    // Optional: Re-run a simplified update to potentially adjust 'Today'/'Tomorrow' Daily Budget 
+    // if that feature is critical. For now, we omit it to ensure responsiveness.
+}
+
+function updateSummaryOnly(base, from, to) {
+    const { totalIncome, totalCommit } = loadIncomeCommitments();
+    const netIncome = totalIncome - totalCommit;
+
+    const today = new Date();
+    // Set time to start of the day for accurate day calculation
+    today.setHours(0,0,0,0);
+    
+    const oneDay = 86400000;
+    
+    // Days Left Until Salary (using the 'To' date as salary date)
+    const daysLeft = Math.ceil((to - today) / oneDay);
+
+    const usedData = JSON.parse(localStorage.getItem("homeBudget") || "{}");
+    let totalUsed = 0;
+    Object.values(usedData).forEach(v => totalUsed += v);
+    const remainingNet = netIncome - totalUsed;
+
+    document.getElementById("totalIncome").textContent = totalIncome.toFixed(2);
+    document.getElementById("totalCommit").textContent = totalCommit.toFixed(2);
+    document.getElementById("netIncome").textContent = netIncome.toFixed(2);
+    // Ensure daysLeft is not negative
+    document.getElementById("daysLeft").textContent = Math.max(0, daysLeft);
+    document.getElementById("dailyBudget").textContent = base.toFixed(2);
+    document.getElementById("remainingNet").textContent = remainingNet.toFixed(2);
+}
+
+function generateTable(from, to, base) {
+    const tbody = document.querySelector("#budgetTable tbody");
+    tbody.innerHTML = "";
+
+    const usedData = JSON.parse(localStorage.getItem("homeBudget") || "{}");
+
+    const today = new Date(); 
+    today.setHours(0,0,0,0);
+    const oneDay = 86400000;
+    const tomorrow = new Date(today.getTime() + oneDay);
+    
+    const todayStr = getLocalISOString(today);
+    const tomorrowStr = getLocalISOString(tomorrow);
+
+    function leftover(yesterdayStr) {
+        if (!usedData[yesterdayStr]) return 0;
+        return base - usedData[yesterdayStr];
+    }
+
+    let current = new Date(from);
+    current.setHours(0,0,0,0);
+
+    while (current <= to) {
+        // *** FIX APPLIED HERE: Use local date getters for consistent date string ***
+        const dateStr = getLocalISOString(current);
+        const row = document.createElement("tr");
+
+        const dateCell = document.createElement("td");
+        dateCell.textContent = dateStr;
+
+        const budgetCell = document.createElement("td");
+        let show = "-";
+
+        if (dateStr === todayStr) {
+            const y = new Date(today.getTime() - oneDay);
+            const yStr = getLocalISOString(y);
+            show = (base + leftover(yStr)).toFixed(2);
+        }
+        else if (dateStr === tomorrowStr) {
+            const yStr = todayStr; // Today's spending determines tomorrow's budget
+            show = (base + leftover(yStr)).toFixed(2);
+        }
+
+        budgetCell.textContent = show;
+
+        const usedCell = document.createElement("td");
+        const input = document.createElement("input");
+        input.type = "number";
+        input.className = "usedBudget";
+        // Check if data exists for this date, otherwise use empty string
+        input.value = usedData[dateStr] !== undefined ? usedData[dateStr] : ""; 
+        input.oninput = () => saveUsedBudget(dateStr, input.value);
+        usedCell.appendChild(input);
+
+        row.appendChild(dateCell);
+        row.appendChild(budgetCell);
+        row.appendChild(usedCell);
+        tbody.appendChild(row);
+
+        current.setDate(current.getDate() + 1);
+    }
+}
+
+function updateDashboard() {
+    const from = getLocalDate("dateFrom");
+    const to = getLocalDate("dateTo");
+    if (!from || !to || from > to) return;
+
+    const { totalIncome, totalCommit } = loadIncomeCommitments();
+    const net = totalIncome - totalCommit;
+
+    const oneDay = 86400000;
+    const totalDays = Math.ceil((to - from) / oneDay) + 1;
+    const base = net / totalDays;
+
+    updateSummaryOnly(base, from, to);
+    generateTable(from, to, base);
+}
+
+function saveDates() {
+    const from = document.getElementById("dateFrom").value;
+    const to = document.getElementById("dateTo").value;
+    localStorage.setItem("homeDates", JSON.stringify({ from, to }));
+}
+
+function resetHome() {
+    if (confirm("Reset only Home budget data? This will clear all recorded daily spending.")) {
+        localStorage.removeItem("homeBudget");
+        updateDashboard();
+    }
+}
+
+function resetAll() {
+    if (confirm("Reset ALL data? This will clear all income, commitments, and budget history.")) {
+        localStorage.clear();
+        location.reload();
+    }
+}
+
+function goInput() {
+    window.location.href = "SalaryInput.html";
+}
+
+// Function to convert date string (YYYY-MM-DD) to a local Date object
+function getLocalDate(id){ 
+    const p=document.getElementById(id).value.split("-"); 
+    // p[1]-1 is essential because JavaScript months are 0-indexed (0=Jan, 11=Dec)
+    return new Date(p[0],p[1]-1,p[2]); 
+}
+
+window.onload = function () {
+    const saved = JSON.parse(localStorage.getItem("homeDates") || "{}");
+    if (saved.from) document.getElementById("dateFrom").value = saved.from;
+    if (saved.to) document.getElementById("dateTo").value = saved.to;
+    updateDashboard();
+};
+</script>
+
+</body>
+</html>
