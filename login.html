@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Login</title>
+
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #e8f5e9;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+
+    .box {
+        background: white;
+        padding: 25px;
+        border-radius: 14px;
+        width: 320px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        text-align: center;
+    }
+
+    h2 {
+        color: #2c7a3f;
+        margin-bottom: 20px;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        border-radius: 8px;
+        border: 1px solid #8dcc90;
+        font-size: 16px;
+    }
+
+    button {
+        width: 100%;
+        padding: 10px;
+        background: #2e8d47;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+
+    button:hover {
+        opacity: 0.85;
+    }
+
+    .link {
+        margin-top: 15px;
+    }
+
+    .link a {
+        color: #2e8d47;
+        font-weight: bold;
+        text-decoration: none;
+    }
+</style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Login</h2>
+
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password">
+
+    <button onclick="login()">Login</button>
+
+    <div class="link">
+        Don't have an account? <a href="signup.html">Sign up</a>
+    </div>
+</div>
+
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+const firebaseConfig = {
+    databaseURL: "YOUR_DATABASE_URL"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Password hashing (same as signup)
+async function hash(text) {
+    const buffer = new TextEncoder().encode(text);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+    return Array.from(new Uint8Array(hashBuffer))
+                .map(b => b.toString(16).padStart(2, "0"))
+                .join("");
+}
+
+window.login = async function () {
+    const user = document.getElementById("username").value.trim();
+    const pass = document.getElementById("password").value;
+
+    if (!user || !pass) {
+        alert("Please fill in both fields.");
+        return;
+    }
+
+    const userRef = ref(db, "users/" + user);
+    const snap = await get(userRef);
+
+    if (!snap.exists()) {
+        alert("User does not exist.");
+        return;
+    }
+
+    const data = snap.val();
+    const hashed = await hash(pass);
+
+    if (hashed !== data.password) {
+        alert("Incorrect password.");
+        return;
+    }
+
+    // Save the logged-in user
+    localStorage.setItem("loggedUser", user);
+
+    alert("Login successful!");
+    window.location.href = "Home.html";
+};
+</script>
+
+</body>
+</html>
