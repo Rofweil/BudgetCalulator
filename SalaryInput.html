@@ -91,7 +91,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
     import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-    // Your Firebase config
+    // Firebase config (your provided values)
     const firebaseConfig = {
         apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
         authDomain: "budgetcalculator-22ef5.firebaseapp.com",
@@ -100,15 +100,16 @@
         messagingSenderId: "574952478496",
         appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
         measurementId: "G-2LL0GD2K30",
+        // Ensure databaseURL matches your realtime DB
         databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
     };
 
-    // Initialize Firebase
+    // Initialize Firebase app and DB
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
     // Load saved values from Firebase on page load
-    window.onload = async function () {
+    window.addEventListener("DOMContentLoaded", async () => {
         try {
             const salarySnap = await get(ref(db, "salary"));
             const partSnap = await get(ref(db, "partTime"));
@@ -122,33 +123,35 @@
             }
         } catch (error) {
             console.error("Error loading data:", error);
-            alert("Failed to load saved data.");
+            // optional: show a non-blocking UI message instead of alert
         }
-    };
+    });
 
-    // Save to Firebase
-    async function saveData() {
+    // Save to Firebase — exposed as global so onclick handlers work
+    window.saveData = async function () {
         const salaryVal = document.getElementById("salary").value;
         const partVal = document.getElementById("partTime").value;
 
         try {
-            await set(ref(db, "salary"), salaryVal);
-            await set(ref(db, "partTime"), partVal);
+            await set(ref(db, "salary"), salaryVal === "" ? null : Number(salaryVal));
+            await set(ref(db, "partTime"), partVal === "" ? null : Number(partVal));
 
             alert("Saved!");
         } catch (error) {
             console.error("Error saving:", error);
-            alert("Failed to save data.");
+            alert("Failed to save data. Check console for details.");
         }
-    }
+    };
 
-    function goNext() {
+    // Navigation functions (global)
+    window.goNext = function () {
+        // Navigate to Commitment.html in the same folder
         window.location.href = "Commitment.html";
-    }
+    };
 
-    function goHome() {
+    window.goHome = function () {
         window.location.href = "Home.html";
-    }
+    };
 </script>
 
 </body>
