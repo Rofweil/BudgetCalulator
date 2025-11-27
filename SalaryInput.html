@@ -5,64 +5,64 @@
 <title>Budget Saver</title>
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        background: #e8f5e9;
-        padding: 20px;
-    }
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #e8f5e9;
+        padding: 20px;
+    }
 
-    .container {
-        max-width: 360px;
-        margin: auto;
-        background: white;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.15);
-    }
+    .container {
+        max-width: 360px;
+        margin: auto;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.15);
+    }
 
-    h2 {
-        text-align: center;
-        color: #2e7d32;
-        margin-bottom: 10px;
-    }
+    h2 {
+        text-align: center;
+        color: #2e7d32;
+        margin-bottom: 10px;
+    }
 
-    label {
-        font-weight: bold;
-        margin-top: 12px;
-        display: block;
-        color: #1b5e20;
-    }
+    label {
+        font-weight: bold;
+        margin-top: 12px;
+        display: block;
+        color: #1b5e20;
+    }
 
-    input {
-        width: 75%;
-        padding: 8px;
-        margin-top: 5px;
-        border: 1px solid #81c784;
-        border-radius: 8px;
-        background: #f1f8f6;
-        font-size: 15px;
-    }
+    input {
+        width: 75%;
+        padding: 8px;
+        margin-top: 5px;
+        border: 1px solid #81c784;
+        border-radius: 8px;
+        background: #f1f8f6;
+        font-size: 15px;
+    }
 
-    .buttons {
-        margin-top: 20px;
-        display: flex;
-        justify-content: space-between;
-    }
+    .buttons {
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+    }
 
-    button {
-        width: 32%;
-        padding: 12px;
-        border: none;
-        border-radius: 8px;
-        font-weight: bold;
-        color: white;
-        cursor: pointer;
-    }
+    button {
+        width: 32%;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        color: white;
+        cursor: pointer;
+    }
 
-    .home { background: #9e9e9e; }
-    .save { background: #388e3c; }
-    .next { background: #43a047; }
+    .home { background: #9e9e9e; }
+    .save { background: #388e3c; }
+    .next { background: #43a047; }
 </style>
 </head>
 
@@ -70,49 +70,86 @@
 
 <div class="container">
 
-    <h2>Budget Saver</h2>
+    <h2>Budget Saver</h2>
 
-    <label>Main Salary</label>
-    <input type="number" id="salary" placeholder="Enter salary">
+    <label>Main Salary</label>
+    <input type="number" id="salary" placeholder="Enter salary">
 
-    <label>Part-Time Salary</label>
-    <input type="number" id="partTime" placeholder="Enter part-time salary">
+    <label>Part-Time Salary</label>
+    <input type="number" id="partTime" placeholder="Enter part-time salary">
 
-    <div class="buttons">
-        <button class="home" onclick="goHome()">Home</button>
-        <button class="save" onclick="saveData()">Save</button>
-        <button class="next" onclick="goNext()">Next</button>
-    </div>
+    <div class="buttons">
+        <button class="home" onclick="goHome()">Home</button>
+        <button class="save" onclick="saveData()">Save</button>
+        <button class="next" onclick="goNext()">Next</button>
+    </div>
 
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
 <script>
-// Load saved values on page load
+    // Configuration provided by the user
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
+      authDomain: "budgetcalculator-22ef5.firebaseapp.com",
+      projectId: "budgetcalculator-22ef5",
+      storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
+      messagingSenderId: "574952478496",
+      appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
+      measurementId: "G-2LL0GD2K30"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    // Define the fixed user ID - MUST match across all HTML files
+    const USER_ID = "guest_user_1"; 
+</script>
+<script>
+// *** LOAD FROM FIREBASE ON PAGE LOAD ***
 window.onload = function () {
-    if (localStorage.getItem("salary")) {
-        salary.value = localStorage.getItem("salary");
-    }
-    if (localStorage.getItem("partTime")) {
-        partTime.value = localStorage.getItem("partTime");
-    }
+    // Firebase database is asynchronous, so we use .once()
+    db.ref('users/' + USER_ID).once('value')
+        .then(snapshot => {
+            const data = snapshot.val();
+            if (data) {
+                // Check if the nodes exist and populate
+                if (data.salary) salary.value = data.salary;
+                if (data.partTime) partTime.value = data.partTime;
+            }
+        })
+        .catch(error => {
+            console.error("Income Load failed:", error);
+        });
 };
 
-// SAVE to localStorage
+// *** SAVE TO FIREBASE ***
 function saveData() {
-    localStorage.setItem("salary", salary.value);
-    localStorage.setItem("partTime", partTime.value);
-
-    alert("Saved!");
+    // We use .update() to save both values to the user's root path
+    db.ref('users/' + USER_ID).update({
+        salary: Number(salary.value) || 0,
+        partTime: Number(partTime.value) || 0
+    })
+    .then(() => {
+        alert("Saved to Cloud!");
+    })
+    .catch(error => {
+        console.error("Save failed:", error);
+        alert("Save failed! Check console for errors.");
+    });
 }
 
 // NEXT → commitment.html
 function goNext() {
-    window.location.href = "Commitment.html";
+    window.location.href = "Commitment.html";
 }
 
 // HOME → Home.html
 function goHome() {
-    window.location.href = "Home.html";
+    window.location.href = "Home.html";
 }
 </script>
 
