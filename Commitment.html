@@ -134,7 +134,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-    // Configuration provided by the user
     const firebaseConfig = {
       apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
       authDomain: "budgetcalculator-22ef5.firebaseapp.com",
@@ -145,18 +144,14 @@
       measurementId: "G-2LL0GD2K30"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    
-    // Define the fixed user ID - MUST match across all HTML files
     const USER_ID = "guest_user_1"; 
 </script>
 <script>
 // *** ASYNCHRONOUS LOAD DATA ON PAGE LOAD ***
 window.onload = function () {
     loadData();
-    // updateTotal() is called at the end of loadData()
 };
 
 // Add extra field (title + number)
@@ -208,7 +203,6 @@ function saveData() {
 
     // Collect dynamic commitments
     for (let i = 0; i < titles.length; i++) {
-        // Only save items with a title or amount
         if (titles[i].value || amounts[i].value) {
             data.other.push({
                 title: titles[i].value,
@@ -217,7 +211,6 @@ function saveData() {
         }
     }
 
-    // Use .set() to save the entire commitments object under the user's path
     db.ref('users/' + USER_ID + '/commitments').set(data)
         .then(() => {
             alert("Commitments Saved to Cloud!");
@@ -234,11 +227,9 @@ function loadData() {
         .then(snapshot => {
             const saved = snapshot.val();
             
-            // Clear existing dynamic fields before loading
             document.getElementById("extraFields").innerHTML = "";
 
             if (!saved) {
-                // Initialize totals even if no data exists
                 updateTotal();
                 return;
             }
@@ -253,7 +244,6 @@ function loadData() {
 
             // Populate dynamic 'other' fields
             if (saved.other) {
-                // Object.values is used to handle Firebase object structure (which may not be a perfect array)
                 Object.values(saved.other).forEach(item => { 
                     addExtraField();
                     const titles = document.querySelectorAll(".otherTitle");
@@ -262,12 +252,11 @@ function loadData() {
                     amounts[amounts.length - 1].value = item.amount;
                 });
             }
-            // Update the total display after loading
             updateTotal(); 
         })
         .catch(error => {
             console.error("Load failed:", error);
-            updateTotal(); // Still calculate zero total if load fails
+            updateTotal(); 
         });
 }
 
