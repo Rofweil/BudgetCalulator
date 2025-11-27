@@ -440,21 +440,31 @@ window.resetHome = async function() {
 };
 
 window.resetAll = async function() {
-    if (!confirm("Reset ALL data for this user? This will delete salary/commitments/home data for guest_user_1.")) return;
-    try {
-        // Remove the whole user node
-        await remove(ref(db, `${userBase}`));
-        // Optionally remove global salary/partTime if you want - currently they are at root
-        // await remove(ref(db, "salary"));
-        // await remove(ref(db, "partTime"));
+    if (!confirm("Reset ALL data? This will delete Salary, Part-Time, Commitments, and all Home data.")) return;
 
-        // Refresh page
+    try {
+        // 1. Remove salary & part-time (root level)
+        await remove(ref(db, "salary"));
+        await remove(ref(db, "partTime"));
+
+        // 2. Remove global commitments
+        await remove(ref(db, "commitments"));
+
+        // 3. Remove all user-specific home data
+        await remove(ref(db, `${userBase}`));   // removes homeDates + homeBudget
+
+        // OPTIONAL:
+        // If you ever add more global entries, you can clear them here.
+
+        alert("All data has been reset.");
         location.reload();
+
     } catch (err) {
         console.error("Error resetting all:", err);
         alert("Reset All failed. See console.");
     }
 };
+
 
 /* ----------------------------
    Navigation
@@ -500,5 +510,6 @@ document.getElementById("btnInputData").addEventListener("click", () => {
 
 </body>
 </html>
+
 
 
