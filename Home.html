@@ -146,6 +146,28 @@
     </table>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+    // Configuration provided by the user
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
+      authDomain: "budgetcalculator-22ef5.firebaseapp.com",
+      projectId: "budgetcalculator-22ef5",
+      storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
+      messagingSenderId: "574952478496",
+      appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
+      measurementId: "G-2LL0GD2K30" // Included but not used by this app logic
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    // Define the fixed user ID - MUST match across all HTML files
+    const USER_ID = "guest_user_1"; 
+</script>
 <script>
 // Helper function to get a date string in YYYY-MM-DD format based on local time
 function getLocalISOString(date) {
@@ -155,61 +177,57 @@ function getLocalISOString(date) {
     return `${y}-${m}-${d}`;
 }
 
-function loadIncomeCommitments() {
-    const salary = Number(localStorage.getItem("salary") || 0);
-    const partTime = Number(localStorage.getItem("partTime") || 0);
-    const commitments = JSON.parse(localStorage.getItem("commitments") || "{}");
+// *** ASYNCHRONOUS DATA LOADING ***
+async function loadIncomeCommitments() {
+    const snapshot = await db.ref('users/' + USER_ID).once('value');
+    const data = snapshot.val() || {};
+
+    const salary = Number(data.salary || 0);
+    const partTime = Number(data.partTime || 0);
+    const commitments = data.commitments || {};
 
     let totalCommit = 0;
-    if (commitments) {
-        const keys = ["rent","motorcycle","telco","electric","water","shopee"];
-        keys.forEach(k => totalCommit += Number(commitments[k] || 0));
-        // Check if other commitments exist and sum them up
-        if (commitments.other && Array.isArray(commitments.other)) {
-            commitments.other.forEach(o => totalCommit += Number(o.amount || 0));
-        }
+    
+    // Sum fixed commitments
+    const keys = ["rent","motorcycle","telco","electric","water","shopee"];
+    keys.forEach(k => totalCommit += Number(commitments[k] || 0));
+    
+    // Sum dynamic commitments (Handles Firebase object structure)
+    if (commitments.other) {
+        Object.values(commitments.other).forEach(o => totalCommit += Number(o.amount || 0));
     }
-
+    
     return { totalIncome: salary + partTime, totalCommit };
 }
 
+// *** SAVE BUDGET TO FIREBASE ***
 function saveUsedBudget(dateStr, value) {
-    const data = JSON.parse(localStorage.getItem("homeBudget") || "{}");
-    data[dateStr] = Number(value);
-    localStorage.setItem("homeBudget", JSON.stringify(data));
+    const numValue = Number(value) || 0;
     
-    // Calculate required base for summary update
-    const from = getLocalDate("dateFrom");
-    const to = getLocalDate("dateTo");
-    if (!from || !to || from > to) return;
-
-    const { totalIncome, totalCommit } = loadIncomeCommitments();
-    const net = totalIncome - totalCommit;
-
-    const totalDays = Math.ceil((to - from) / 86400000) + 1;
-    const base = net / totalDays;
-    
-    // *** FIX APPLIED HERE: ONLY UPDATE SUMMARY, DO NOT REDRAW THE TABLE ***
-    updateSummaryOnly(base, from, to);
-    
-    // Optional: Re-run a simplified update to potentially adjust 'Today'/'Tomorrow' Daily Budget 
-    // if that feature is critical. For now, we omit it to ensure responsiveness.
+    db.ref('users/' + USER_ID + '/homeBudget/' + dateStr).set(numValue)
+        .then(() => {
+            // Re-calculate summary after saving new value
+            updateDashboard(); 
+        })
+        .catch(error => console.error("Save budget failed:", error));
 }
 
-function updateSummaryOnly(base, from, to) {
-    const { totalIncome, totalCommit } = loadIncomeCommitments();
+// *** ASYNCHRONOUS UPDATE SUMMARY ***
+async function updateSummaryOnly(base, from, to) {
+    const { totalIncome, totalCommit } = await loadIncomeCommitments();
     const netIncome = totalIncome - totalCommit;
 
     const today = new Date();
-    // Set time to start of the day for accurate day calculation
     today.setHours(0,0,0,0);
-    
     const oneDay = 86400000;
     
     // Days Left Until Salary (using the 'To' date as salary date)
     const daysLeft = Math.ceil((to - today) / oneDay);
+    
+    // Load used budget data to calculate total used
+    const snapshot = await db.ref('users/' + USER_ID + '/homeBudget').once('value');
+    const usedData = snapshot.val() || {};
 
-    const usedData = JSON.parse(localStorage.getItem("homeBudget") || "{}");
     let totalUsed = 0;
     Object.values(usedData).forEach(v => totalUsed += v);
     const remainingNet = netIncome - totalUsed;
@@ -217,36 +235,38 @@ function updateSummaryOnly(base, from, to) {
     document.getElementById("totalIncome").textContent = totalIncome.toFixed(2);
     document.getElementById("totalCommit").textContent = totalCommit.toFixed(2);
     document.getElementById("netIncome").textContent = netIncome.toFixed(2);
-    // Ensure daysLeft is not negative
     document.getElementById("daysLeft").textContent = Math.max(0, daysLeft);
     document.getElementById("dailyBudget").textContent = base.toFixed(2);
     document.getElementById("remainingNet").textContent = remainingNet.toFixed(2);
 }
 
-function generateTable(from, to, base) {
+// *** ASYNCHRONOUS TABLE GENERATION ***
+async function generateTable(from, to, base) {
     const tbody = document.querySelector("#budgetTable tbody");
     tbody.innerHTML = "";
 
-    const usedData = JSON.parse(localStorage.getItem("homeBudget") || "{}");
+    // Load used budget data from Firebase
+    const snapshot = await db.ref('users/' + USER_ID + '/homeBudget').once('value');
+    const usedData = snapshot.val() || {};
 
-    const today = new Date(); 
-    today.setHours(0,0,0,0);
+    const today = new Date(); today.setHours(0,0,0,0);
     const oneDay = 86400000;
     const tomorrow = new Date(today.getTime() + oneDay);
     
     const todayStr = getLocalISOString(today);
     const tomorrowStr = getLocalISOString(tomorrow);
 
+
     function leftover(yesterdayStr) {
-        if (!usedData[yesterdayStr]) return 0;
-        return base - usedData[yesterdayStr];
+        const yesterdayUsed = usedData[yesterdayStr];
+        if (yesterdayUsed === undefined || yesterdayUsed === null) return 0;
+        return base - yesterdayUsed;
     }
 
     let current = new Date(from);
     current.setHours(0,0,0,0);
 
     while (current <= to) {
-        // *** FIX APPLIED HERE: Use local date getters for consistent date string ***
         const dateStr = getLocalISOString(current);
         const row = document.createElement("tr");
 
@@ -262,7 +282,7 @@ function generateTable(from, to, base) {
             show = (base + leftover(yStr)).toFixed(2);
         }
         else if (dateStr === tomorrowStr) {
-            const yStr = todayStr; // Today's spending determines tomorrow's budget
+            const yStr = todayStr;
             show = (base + leftover(yStr)).toFixed(2);
         }
 
@@ -272,7 +292,6 @@ function generateTable(from, to, base) {
         const input = document.createElement("input");
         input.type = "number";
         input.className = "usedBudget";
-        // Check if data exists for this date, otherwise use empty string
         input.value = usedData[dateStr] !== undefined ? usedData[dateStr] : ""; 
         input.oninput = () => saveUsedBudget(dateStr, input.value);
         usedCell.appendChild(input);
@@ -286,39 +305,47 @@ function generateTable(from, to, base) {
     }
 }
 
-function updateDashboard() {
+// *** ASYNCHRONOUS DASHBOARD UPDATE ***
+async function updateDashboard() {
     const from = getLocalDate("dateFrom");
     const to = getLocalDate("dateTo");
     if (!from || !to || from > to) return;
 
-    const { totalIncome, totalCommit } = loadIncomeCommitments();
+    const { totalIncome, totalCommit } = await loadIncomeCommitments();
     const net = totalIncome - totalCommit;
 
     const oneDay = 86400000;
     const totalDays = Math.ceil((to - from) / oneDay) + 1;
     const base = net / totalDays;
 
-    updateSummaryOnly(base, from, to);
-    generateTable(from, to, base);
+    await updateSummaryOnly(base, from, to);
+    await generateTable(from, to, base);
 }
 
+// *** SAVE DATES TO FIREBASE ***
 function saveDates() {
     const from = document.getElementById("dateFrom").value;
     const to = document.getElementById("dateTo").value;
-    localStorage.setItem("homeDates", JSON.stringify({ from, to }));
+    
+    db.ref('users/' + USER_ID + '/homeDates').set({ from, to })
+        .catch(error => console.error("Save dates failed:", error));
 }
 
+// *** RESET BUDGET DATA IN FIREBASE ***
 function resetHome() {
     if (confirm("Reset only Home budget data? This will clear all recorded daily spending.")) {
-        localStorage.removeItem("homeBudget");
-        updateDashboard();
+        db.ref('users/' + USER_ID + '/homeBudget').set(null)
+            .then(() => updateDashboard())
+            .catch(error => console.error("Reset home failed:", error));
     }
 }
 
+// *** RESET ALL DATA IN FIREBASE ***
 function resetAll() {
     if (confirm("Reset ALL data? This will clear all income, commitments, and budget history.")) {
-        localStorage.clear();
-        location.reload();
+        db.ref('users/' + USER_ID).set(null)
+            .then(() => location.reload())
+            .catch(error => console.error("Reset all failed:", error));
     }
 }
 
@@ -326,18 +353,24 @@ function goInput() {
     window.location.href = "SalaryInput.html";
 }
 
-// Function to convert date string (YYYY-MM-DD) to a local Date object
 function getLocalDate(id){ 
     const p=document.getElementById(id).value.split("-"); 
-    // p[1]-1 is essential because JavaScript months are 0-indexed (0=Jan, 11=Dec)
     return new Date(p[0],p[1]-1,p[2]); 
 }
 
+// *** WINDOW ONLOAD: LOAD DATES FROM FIREBASE ***
 window.onload = function () {
-    const saved = JSON.parse(localStorage.getItem("homeDates") || "{}");
-    if (saved.from) document.getElementById("dateFrom").value = saved.from;
-    if (saved.to) document.getElementById("dateTo").value = saved.to;
-    updateDashboard();
+    db.ref('users/' + USER_ID + '/homeDates').once('value')
+        .then(snapshot => {
+            const saved = snapshot.val() || {};
+            if (saved.from) document.getElementById("dateFrom").value = saved.from;
+            if (saved.to) document.getElementById("dateTo").value = saved.to;
+            updateDashboard();
+        })
+        .catch(error => {
+            console.error("Initial data load failed:", error);
+            updateDashboard();
+        });
 };
 </script>
 
