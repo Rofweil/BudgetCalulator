@@ -146,33 +146,33 @@
     </table>
 </div>
 
-<!-- FIREBASE + ALL LOGIC -->
 <script type="module">
-import { 
-    initializeApp 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+/* Firebase imports (match style used in your other pages) */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getDatabase, ref, get, set, update, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-import { 
-    getDatabase, ref, get, set, update 
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
+/* Firebase config - keep your project's config (unchanged) */
 const firebaseConfig = {
-    apiKey: "AIzaSyBeJqAiIT1pDb48k08jePgIbuLKrbgy3_o",
-    authDomain: "budgettrack-66192.firebaseapp.com",
-    databaseURL: "https://budgettrack-66192-default-rtdb.firebaseio.com",
-    projectId: "budgettrack-66192",
-    storageBucket: "budgettrack-66192.firebasestorage.app",
-    messagingSenderId: "692773198304",
-    appId: "1:692773198304:web:f3fc6224ca82872b1e389f"
+  apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
+  authDomain: "budgetcalculator-22ef5.firebaseapp.com",
+  projectId: "budgetcalculator-22ef5",
+  storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
+  messagingSenderId: "574952478496",
+  appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
+  measurementId: "G-2LL0GD2K30",
+  databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* ---------------------
-   HELPER FUNCTIONS
----------------------- */
+/* USER PATH */
+const USER = "guest_user_1";
+const userBase = `users/${USER}`;
 
+/* ----------------------------
+   Helper date & DOM functions
+   ---------------------------- */
 function getLocalISOString(date) {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -181,229 +181,283 @@ function getLocalISOString(date) {
 }
 
 function getLocalDate(id){
-    const p = document.getElementById(id).value.split("-");
+    const v = document.getElementById(id).value;
+    if (!v) return null;
+    const p = v.split("-");
     if (p.length !== 3) return null;
     return new Date(p[0], p[1]-1, p[2]);
 }
 
-/* ---------------------
-   LOAD FINANCIAL DATA
----------------------- */
-
+/* ----------------------------
+   Load income and commitments
+   (reads root /salary & /partTime and user commitments)
+   ---------------------------- */
 async function loadIncomeCommitments() {
-    const snap = await get(ref(db, "finance"));
-    let salary = 0, partTime = 0, commitments = {};
+    try {
+        const salarySnap = await get(ref(db, "salary"));
+        const partSnap = await get(ref(db, "partTime"));
+        const commitSnap = await get(ref(db, `${userBase}/commitments`));
 
-    if (snap.exists()) {
-        const data = snap.val();
-        salary = Number(data.salary || 0);
-        partTime = Number(data.partTime || 0);
-        commitments = data.commitments || {};
-    }
+        const salary = Number(salarySnap.exists() ? salarySnap.val() : 0);
+        const partTime = Number(partSnap.exists() ? partSnap.val() : 0);
+        const commitments = commitSnap.exists() ? commitSnap.val() : {};
 
-    let totalCommit = 0;
-    const keys = ["rent","motorcycle","telco","electric","water","shopee"];
-    keys.forEach(k => totalCommit += Number(commitments[k] || 0));
+        let totalCommit = 0;
+        const keys = ["rent","motorcycle","telco","electric","water","shopee"];
+        keys.forEach(k => totalCommit += Number(commitments[k] || 0));
 
-    if (commitments.other) {
-        commitments.other.forEach(o => totalCommit += Number(o.amount || 0));
-    }
-
-    return { totalIncome: salary + partTime, totalCommit };
-}
-
-/* ---------------------
-   SAVE DAILY SPENDING
----------------------- */
-
-async function saveUsedBudget(dateStr, value) {
-    await update(ref(db, "homeBudget"), {
-        [dateStr]: Number(value)
-    });
-
-    const from = getLocalDate("dateFrom");
-    const to = getLocalDate("dateTo");
-    if (!from || !to || from > to) return;
-
-    const { totalIncome, totalCommit } = await loadIncomeCommitments();
-    const net = totalIncome - totalCommit;
-
-    const totalDays = Math.ceil((to - from) / 86400000) + 1;
-    const base = net / totalDays;
-
-    updateSummaryOnly(base, from, to);
-}
-
-/* ---------------------
-   SUMMARY ONLY UPDATE
----------------------- */
-
-async function updateSummaryOnly(base, from, to) {
-    const { totalIncome, totalCommit } = await loadIncomeCommitments();
-    const netIncome = totalIncome - totalCommit;
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
-    const daysLeft = Math.max(
-        0,
-        Math.ceil((to - today) / 86400000)
-    );
-
-    const usedSnap = await get(ref(db, "homeBudget"));
-    let totalUsed = 0;
-    if (usedSnap.exists()) {
-        const usedData = usedSnap.val();
-        Object.values(usedData).forEach(v => totalUsed += Number(v));
-    }
-
-    const remainingNet = netIncome - totalUsed;
-
-    document.getElementById("totalIncome").textContent = totalIncome.toFixed(2);
-    document.getElementById("totalCommit").textContent = totalCommit.toFixed(2);
-    document.getElementById("netIncome").textContent = netIncome.toFixed(2);
-    document.getElementById("daysLeft").textContent = daysLeft;
-    document.getElementById("dailyBudget").textContent = base.toFixed(2);
-    document.getElementById("remainingNet").textContent = remainingNet.toFixed(2);
-}
-
-/* ---------------------
-   GENERATE DAILY TABLE
----------------------- */
-
-async function generateTable(from, to, base) {
-    const tbody = document.querySelector("#budgetTable tbody");
-    tbody.innerHTML = "";
-
-    const usedSnap = await get(ref(db, "homeBudget"));
-    const usedData = usedSnap.exists() ? usedSnap.val() : {};
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
-    const oneDay = 86400000;
-    const tomorrow = new Date(today.getTime() + oneDay);
-
-    const todayStr = getLocalISOString(today);
-    const tomorrowStr = getLocalISOString(tomorrow);
-
-    function leftover(yesterdayStr) {
-        if (!usedData[yesterdayStr]) return 0;
-        return base - usedData[yesterdayStr];
-    }
-
-    let current = new Date(from);
-    current.setHours(0,0,0,0);
-
-    while (current <= to) {
-        const dateStr = getLocalISOString(current);
-        const row = document.createElement("tr");
-
-        const dateCell = document.createElement("td");
-        dateCell.textContent = dateStr;
-
-        const budgetCell = document.createElement("td");
-        let show = "-";
-
-        if (dateStr === todayStr) {
-            const y = new Date(today.getTime() - oneDay);
-            show = (base + leftover(getLocalISOString(y))).toFixed(2);
-        } else if (dateStr === tomorrowStr) {
-            show = (base + leftover(todayStr)).toFixed(2);
+        // handle other (array or object)
+        if (commitments.other) {
+            if (Array.isArray(commitments.other)) {
+                commitments.other.forEach(o => totalCommit += Number(o.amount || 0));
+            } else {
+                Object.values(commitments.other).forEach(o => {
+                    if (o && typeof o === "object") totalCommit += Number(o.amount || 0);
+                    else totalCommit += Number(o || 0);
+                });
+            }
         }
 
-        budgetCell.textContent = show;
-
-        const usedCell = document.createElement("td");
-        const input = document.createElement("input");
-        input.type = "number";
-        input.className = "usedBudget";
-        input.value = usedData[dateStr] !== undefined ? usedData[dateStr] : "";
-
-        input.oninput = () => saveUsedBudget(dateStr, input.value);
-
-        usedCell.appendChild(input);
-
-        row.appendChild(dateCell);
-        row.appendChild(budgetCell);
-        row.appendChild(usedCell);
-        tbody.appendChild(row);
-
-        current.setDate(current.getDate() + 1);
+        return { totalIncome: salary + partTime, totalCommit };
+    } catch (err) {
+        console.error("Error loading income/commitments:", err);
+        return { totalIncome: 0, totalCommit: 0 };
     }
 }
 
-/* ---------------------
-   MAIN DASHBOARD UPDATE
----------------------- */
+/* ----------------------------
+   Save a single used budget entry
+   Stored at /users/guest_user_1/homeBudget/{date}
+   ---------------------------- */
+window.saveUsedBudget = async function(dateStr, value) {
+    try {
+        // If empty -> remove node, else set number
+        const nodeRef = ref(db, `${userBase}/homeBudget/${dateStr}`);
+        if (value === "" || value === null || value === undefined) {
+            await remove(nodeRef);
+        } else {
+            const num = Number(value);
+            if (Number.isNaN(num)) return;
+            await set(nodeRef, num);
+        }
 
-async function updateDashboard() {
+        // Recompute summary & optionally refresh table
+        const from = getLocalDate("dateFrom");
+        const to = getLocalDate("dateTo");
+        if (!from || !to || from > to) return;
+
+        const { totalIncome, totalCommit } = await loadIncomeCommitments();
+        const net = totalIncome - totalCommit;
+        const totalDays = Math.ceil((to - from) / 86400000) + 1;
+        const base = net / totalDays;
+
+        await updateSummaryOnly(base, from, to);
+        // regenerate table to reflect any change (keeps UI consistent)
+        await generateTable(from, to, base);
+    } catch (err) {
+        console.error("Error saving used budget:", err);
+    }
+};
+
+/* ----------------------------
+   Update summary fields only
+   ---------------------------- */
+async function updateSummaryOnly(base, from, to) {
+    try {
+        const { totalIncome, totalCommit } = await loadIncomeCommitments();
+        const netIncome = totalIncome - totalCommit;
+
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        const daysLeft = Math.max(0, Math.ceil((to - today) / 86400000));
+
+        // sum used amounts
+        const usedSnap = await get(ref(db, `${userBase}/homeBudget`));
+        let totalUsed = 0;
+        if (usedSnap.exists()) {
+            const usedData = usedSnap.val();
+            Object.values(usedData).forEach(v => totalUsed += Number(v || 0));
+        }
+
+        const remainingNet = netIncome - totalUsed;
+
+        document.getElementById("totalIncome").textContent = totalIncome.toFixed(2);
+        document.getElementById("totalCommit").textContent = totalCommit.toFixed(2);
+        document.getElementById("netIncome").textContent = netIncome.toFixed(2);
+        document.getElementById("daysLeft").textContent = daysLeft;
+        document.getElementById("dailyBudget").textContent = base.toFixed(2);
+        document.getElementById("remainingNet").textContent = remainingNet.toFixed(2);
+    } catch (err) {
+        console.error("Error updating summary:", err);
+    }
+}
+
+/* ----------------------------
+   Build the per-day table
+   ---------------------------- */
+async function generateTable(from, to, base) {
+    try {
+        const tbody = document.querySelector("#budgetTable tbody");
+        tbody.innerHTML = "";
+
+        const usedSnap = await get(ref(db, `${userBase}/homeBudget`));
+        const usedData = usedSnap.exists() ? usedSnap.val() : {};
+
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const oneDay = 86400000;
+        const tomorrow = new Date(today.getTime() + oneDay);
+
+        const todayStr = getLocalISOString(today);
+        const tomorrowStr = getLocalISOString(tomorrow);
+
+        function leftover(yesterdayStr) {
+            if (!usedData[yesterdayStr]) return 0;
+            return base - Number(usedData[yesterdayStr]);
+        }
+
+        let current = new Date(from);
+        current.setHours(0,0,0,0);
+
+        while (current <= to) {
+            const dateStr = getLocalISOString(current);
+            const row = document.createElement("tr");
+
+            const dateCell = document.createElement("td");
+            dateCell.textContent = dateStr;
+
+            const budgetCell = document.createElement("td");
+            let show = "-";
+
+            if (dateStr === todayStr) {
+                const y = new Date(today.getTime() - oneDay);
+                show = (base + leftover(getLocalISOString(y))).toFixed(2);
+            } else if (dateStr === tomorrowStr) {
+                show = (base + leftover(todayStr)).toFixed(2);
+            }
+
+            budgetCell.textContent = show;
+
+            const usedCell = document.createElement("td");
+            const input = document.createElement("input");
+            input.type = "number";
+            input.className = "usedBudget";
+            input.value = usedData[dateStr] !== undefined ? usedData[dateStr] : "";
+
+            // Save on input (debounce not implemented - keeps behavior like before)
+            input.oninput = () => window.saveUsedBudget(dateStr, input.value);
+
+            usedCell.appendChild(input);
+
+            row.appendChild(dateCell);
+            row.appendChild(budgetCell);
+            row.appendChild(usedCell);
+            tbody.appendChild(row);
+
+            current.setDate(current.getDate() + 1);
+        }
+    } catch (err) {
+        console.error("Error generating table:", err);
+    }
+}
+
+/* ----------------------------
+   Main dashboard update
+   ---------------------------- */
+window.updateDashboard = async function() {
     const from = getLocalDate("dateFrom");
     const to = getLocalDate("dateTo");
     if (!from || !to || from > to) return;
 
-    const { totalIncome, totalCommit } = await loadIncomeCommitments();
-    const net = totalIncome - totalCommit;
+    try {
+        const { totalIncome, totalCommit } = await loadIncomeCommitments();
+        const net = totalIncome - totalCommit;
 
-    const totalDays = Math.ceil((to - from) / 86400000) + 1;
-    const base = net / totalDays;
+        const totalDays = Math.ceil((to - from) / 86400000) + 1;
+        const base = net / totalDays;
 
-    await updateSummaryOnly(base, from, to);
-    await generateTable(from, to, base);
-}
-
-/* ---------------------
-   SAVE DATE RANGE
----------------------- */
-
-function saveDates() {
-    const from = document.getElementById("dateFrom").value;
-    const to = document.getElementById("dateTo").value;
-    update(ref(db, "homeDates"), { from, to });
-}
-
-/* ---------------------
-   RESET FUNCTIONS
----------------------- */
-
-async function resetHome() {
-    if (confirm("Reset only Home budget data?")) {
-        await set(ref(db, "homeBudget"), {});
-        updateDashboard();
+        await updateSummaryOnly(base, from, to);
+        await generateTable(from, to, base);
+    } catch (err) {
+        console.error("Error updating dashboard:", err);
     }
-}
-
-async function resetAll() {
-    if (confirm("Reset ALL data?")) {
-        await set(ref(db, "finance"), {});
-        await set(ref(db, "homeBudget"), {});
-        await set(ref(db, "homeDates"), {});
-        location.reload();
-    }
-}
-
-/* ---------------------
-   NAVIGATION
----------------------- */
-
-function goInput() {
-    window.location.href = "SalaryInput.html";
-}
-
-/* ---------------------
-   ON PAGE LOAD
----------------------- */
-
-window.onload = async function () {
-    const snap = await get(ref(db, "homeDates"));
-    if (snap.exists()) {
-        const d = snap.val();
-        if (d.from) document.getElementById("dateFrom").value = d.from;
-        if (d.to) document.getElementById("dateTo").value = d.to;
-    }
-    updateDashboard();
 };
 
+/* ----------------------------
+   Save date range under user
+   ---------------------------- */
+window.saveDates = async function() {
+    try {
+        const from = document.getElementById("dateFrom").value || "";
+        const to = document.getElementById("dateTo").value || "";
+        await update(ref(db, `${userBase}/homeDates`), { from, to });
+    } catch (err) {
+        console.error("Error saving dates:", err);
+    }
+};
+
+/* ----------------------------
+   Reset functions
+   ---------------------------- */
+window.resetHome = async function() {
+    if (!confirm("Reset only Home budget data? This will clear home spending and dates.")) return;
+    try {
+        await remove(ref(db, `${userBase}/homeBudget`));
+        await remove(ref(db, `${userBase}/homeDates`));
+        // Clear UI
+        document.querySelector("#budgetTable tbody").innerHTML = "";
+        document.getElementById("dateFrom").value = "";
+        document.getElementById("dateTo").value = "";
+        // Recompute summary
+        updateDashboard();
+    } catch (err) {
+        console.error("Error resetting home data:", err);
+        alert("Reset Home failed. See console.");
+    }
+};
+
+window.resetAll = async function() {
+    if (!confirm("Reset ALL data for this user? This will delete salary/commitments/home data for guest_user_1.")) return;
+    try {
+        // Remove the whole user node
+        await remove(ref(db, `${userBase}`));
+        // Optionally remove global salary/partTime if you want - currently they are at root
+        // await remove(ref(db, "salary"));
+        // await remove(ref(db, "partTime"));
+
+        // Refresh page
+        location.reload();
+    } catch (err) {
+        console.error("Error resetting all:", err);
+        alert("Reset All failed. See console.");
+    }
+};
+
+/* ----------------------------
+   Navigation
+   ---------------------------- */
+window.goInput = function() {
+    window.location.href = "SalaryInput.html";
+};
+
+/* ----------------------------
+   Page load: fill dates then update dashboard
+   ---------------------------- */
+window.onload = async function() {
+    try {
+        const dSnap = await get(ref(db, `${userBase}/homeDates`));
+        if (dSnap.exists()) {
+            const d = dSnap.val();
+            if (d.from) document.getElementById("dateFrom").value = d.from;
+            if (d.to) document.getElementById("dateTo").value = d.to;
+        }
+    } catch (err) {
+        console.error("Error loading saved dates:", err);
+    }
+    // call updateDashboard (safe even if dates not set)
+    window.updateDashboard();
+};
 </script>
 
 </body>
