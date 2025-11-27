@@ -24,7 +24,7 @@
     h2 {
         text-align: center;
         color: #2e7d32;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
 
     label {
@@ -35,31 +35,29 @@
     }
 
     input {
-        width: 100%;
-        padding: 10px;
+        width: 75%;
+        padding: 8px;
         margin-top: 5px;
         border: 1px solid #81c784;
         border-radius: 8px;
         background: #f1f8f6;
-        font-size: 16px;
+        font-size: 15px;
     }
 
     .buttons {
-        margin-top: 25px;
+        margin-top: 20px;
         display: flex;
         justify-content: space-between;
-        gap: 10px;
     }
 
     button {
-        flex: 1;
+        width: 32%;
         padding: 12px;
         border: none;
         border-radius: 8px;
         font-weight: bold;
         color: white;
         cursor: pointer;
-        font-size: 15px;
     }
 
     .home { background: #9e9e9e; }
@@ -88,64 +86,69 @@
 
 </div>
 
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<!-- Firebase Script -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-<script>
+    // Your Firebase config
     const firebaseConfig = {
         apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
         authDomain: "budgetcalculator-22ef5.firebaseapp.com",
-        databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/",
         projectId: "budgetcalculator-22ef5",
         storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
         messagingSenderId: "574952478496",
         appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
-        measurementId: "G-2LL0GD2K30"
+        measurementId: "G-2LL0GD2K30",
+        databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const USER_ID = "guest_user_1";
-</script>
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-<script>
-// Load data when page opens
-window.onload = function () {
-    db.ref("users/" + USER_ID).once("value")
-        .then(snapshot => {
-            const data = snapshot.val();
-            if (data) {
-                document.getElementById("salary").value = data.salary || "";
-                document.getElementById("partTime").value = data.partTime || "";
+    // Load saved values from Firebase on page load
+    window.onload = async function () {
+        try {
+            const salarySnap = await get(ref(db, "salary"));
+            const partSnap = await get(ref(db, "partTime"));
+
+            if (salarySnap.exists()) {
+                document.getElementById("salary").value = salarySnap.val();
             }
-        });
-};
 
-// Save to Firebase
-function saveData() {
-    const salaryValue = Number(document.getElementById("salary").value) || 0;
-    const partTimeValue = Number(document.getElementById("partTime").value) || 0;
+            if (partSnap.exists()) {
+                document.getElementById("partTime").value = partSnap.val();
+            }
+        } catch (error) {
+            console.error("Error loading data:", error);
+            alert("Failed to load saved data.");
+        }
+    };
 
-    db.ref("users/" + USER_ID).update({
-        salary: salaryValue,
-        partTime: partTimeValue
-    }).then(() => {
-        alert("Saved successfully!");
-    }).catch(err => {
-        console.error(err);
-        alert("Save failed.");
-    });
-}
+    // Save to Firebase
+    async function saveData() {
+        const salaryVal = document.getElementById("salary").value;
+        const partVal = document.getElementById("partTime").value;
 
-// Navigation
-function goNext() {
-    window.location.href = "Commitment.html";
-}
+        try {
+            await set(ref(db, "salary"), salaryVal);
+            await set(ref(db, "partTime"), partVal);
 
-function goHome() {
-    window.location.href = "Home.html";
-}
+            alert("Saved!");
+        } catch (error) {
+            console.error("Error saving:", error);
+            alert("Failed to save data.");
+        }
+    }
+
+    function goNext() {
+        window.location.href = "Commitment.html";
+    }
+
+    function goHome() {
+        window.location.href = "Home.html";
+    }
 </script>
 
 </body>
