@@ -5,90 +5,90 @@
 <title>Commitment Tracker</title>
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        background: #e8f5e9;
-        padding: 20px;
-    }
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        background: #e8f5e9;
+        padding: 20px;
+    }
 
-    .container {
-        max-width: 380px;
-        margin: auto;
-        background: white;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.15);
-    }
+    .container {
+        max-width: 380px;
+        margin: auto;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.15);
+    }
 
-    h2 {
-        text-align: center;
-        color: #2e7d32;
-        margin-bottom: 5px;
-    }
+    h2 {
+        text-align: center;
+        color: #2e7d32;
+        margin-bottom: 5px;
+    }
 
-    .totalBox {
-        text-align: center;
-        font-size: 20px;
-        font-weight: bold;
-        color: #1b5e20;
-        background: #c8e6c9;
-        padding: 10px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-    }
+    .totalBox {
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        color: #1b5e20;
+        background: #c8e6c9;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
 
-    label {
-        font-weight: bold;
-        margin-top: 12px;
-        display: block;
-        color: #1b5e20;
-    }
+    label {
+        font-weight: bold;
+        margin-top: 12px;
+        display: block;
+        color: #1b5e20;
+    }
 
-    input[type="number"], input[type="text"] {
-        width: 75%;
-        padding: 8px;
-        margin-top: 5px;
-        border: 1px solid #81c784;
-        border-radius: 8px;
-        background: #f1f8f6;
-        font-size: 15px;
-    }
+    input[type="number"], input[type="text"] {
+        width: 75%;
+        padding: 8px;
+        margin-top: 5px;
+        border: 1px solid #81c784;
+        border-radius: 8px;
+        background: #f1f8f6;
+        font-size: 15px;
+    }
 
-    .add-btn {
-        margin-top: 15px;
-        width: 100%;
-        padding: 10px;
-        background: #66bb6a;
-        border: none;
-        border-radius: 8px;
-        color: white;
-        font-weight: bold;
-        cursor: pointer;
-    }
-    .add-btn:hover {
-        background: #388e3c;
-    }
+    .add-btn {
+        margin-top: 15px;
+        width: 100%;
+        padding: 10px;
+        background: #66bb6a;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .add-btn:hover {
+        background: #388e3c;
+    }
 
-    .buttons {
-        margin-top: 20px;
-        display: flex;
-        justify-content: space-between;
-    }
+    .buttons {
+        margin-top: 20px;
+        display: flex;
+        justify-content: space-between;
+    }
 
-    button {
-        width: 32%;
-        padding: 12px;
-        border: none;
-        border-radius: 8px;
-        font-weight: bold;
-        color: white;
-        cursor: pointer;
-    }
+    button {
+        width: 32%;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        color: white;
+        cursor: pointer;
+    }
 
-    .home { background: #9e9e9e; }
-    .save { background: #388e3c; }
-    .back { background: #43a047; }
+    .home { background: #9e9e9e; }
+    .save { background: #388e3c; }
+    .back { background: #43a047; }
 </style>
 </head>
 
@@ -96,138 +96,188 @@
 
 <div class="container">
 
-    <h2>Commitment</h2>
+    <h2>Commitment</h2>
 
-    <div class="totalBox" id="totalCommit">Total: RM0</div>
+    <div class="totalBox" id="totalCommit">Total: RM0</div>
 
-    <!-- FIXED FIELDS -->
-    <label>Rent</label>
-    <input type="number" id="rent" oninput="updateTotal()">
+        <label>Rent</label>
+    <input type="number" id="rent" oninput="updateTotal()">
 
-    <label>Motorcycle</label>
-    <input type="number" id="motorcycle" oninput="updateTotal()">
+    <label>Motorcycle</label>
+    <input type="number" id="motorcycle" oninput="updateTotal()">
 
-    <label>Telco</label>
-    <input type="number" id="telco" oninput="updateTotal()">
+    <label>Telco</label>
+    <input type="number" id="telco" oninput="updateTotal()">
 
-    <label>Electricity</label>
-    <input type="number" id="electric" oninput="updateTotal()">
+    <label>Electricity</label>
+    <input type="number" id="electric" oninput="updateTotal()">
 
-    <label>Water</label>
-    <input type="number" id="water" oninput="updateTotal()">
+    <label>Water</label>
+    <input type="number" id="water" oninput="updateTotal()">
 
-    <label>Shopee</label>
-    <input type="number" id="shopee" oninput="updateTotal()">
+    <label>Shopee</label>
+    <input type="number" id="shopee" oninput="updateTotal()">
 
-    <!-- Dynamic fields container -->
-    <div id="extraFields"></div>
+        <div id="extraFields"></div>
 
-    <button class="add-btn" onclick="addExtraField()">+ Add Other</button>
+    <button class="add-btn" onclick="addExtraField()">+ Add Other</button>
 
-    <div class="buttons">
-        <button class="home" onclick="goHome()">Home</button>
-        <button class="save" onclick="saveData()">Save</button>
-        <button class="back" onclick="goBack()">Back</button>
-    </div>
+    <div class="buttons">
+        <button class="home" onclick="goHome()">Home</button>
+        <button class="save" onclick="saveData()">Save</button>
+        <button class="back" onclick="goBack()">Back</button>
+    </div>
 
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
 <script>
+    // Configuration provided by the user
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
+      authDomain: "budgetcalculator-22ef5.firebaseapp.com",
+      projectId: "budgetcalculator-22ef5",
+      storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
+      messagingSenderId: "574952478496",
+      appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
+      measurementId: "G-2LL0GD2K30"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    // Define the fixed user ID - MUST match across all HTML files
+    const USER_ID = "guest_user_1"; 
+</script>
+<script>
+// *** ASYNCHRONOUS LOAD DATA ON PAGE LOAD ***
 window.onload = function () {
     loadData();
-    updateTotal();
+    // updateTotal() is called at the end of loadData()
 };
 
 // Add extra field (title + number)
 function addExtraField() {
-    const div = document.createElement("div");
+    const div = document.createElement("div");
 
-    div.innerHTML = `
-        <label>Other (Title)</label>
-        <input type="text" class="otherTitle">
+    div.innerHTML = `
+        <label>Other (Title)</label>
+        <input type="text" class="otherTitle">
 
-        <label>Amount</label>
-        <input type="number" class="otherAmount" oninput="updateTotal()">
-    `;
+        <label>Amount</label>
+        <input type="number" class="otherAmount" oninput="updateTotal()">
+    `;
 
-    document.getElementById("extraFields").appendChild(div);
+    document.getElementById("extraFields").appendChild(div);
 }
 
 // Calculate total
 function updateTotal() {
-    let total = 0;
+    let total = 0;
 
-    const ids = ["rent", "motorcycle", "telco", "electric", "water", "shopee"];
+    const ids = ["rent", "motorcycle", "telco", "electric", "water", "shopee"];
 
-    ids.forEach(id => {
-        total += Number(document.getElementById(id)?.value || 0);
-    });
+    ids.forEach(id => {
+        total += Number(document.getElementById(id)?.value || 0);
+    });
 
-    document.querySelectorAll(".otherAmount").forEach(a => {
-        total += Number(a.value || 0);
-    });
+    document.querySelectorAll(".otherAmount").forEach(a => {
+        total += Number(a.value || 0);
+    });
 
-    document.getElementById("totalCommit").innerText = "Total: RM" + total;
+    document.getElementById("totalCommit").innerText = "Total: RM" + total.toFixed(2);
 }
 
-// Save to localStorage
+// *** SAVE TO FIREBASE ***
 function saveData() {
-    const data = {
-        rent: rent.value,
-        motorcycle: motorcycle.value,
-        telco: telco.value,
-        electric: electric.value,
-        water: water.value,
-        shopee: shopee.value,
-        other: []
-    };
+    const data = {
+        rent: Number(rent.value) || 0,
+        motorcycle: Number(motorcycle.value) || 0,
+        telco: Number(telco.value) || 0,
+        electric: Number(electric.value) || 0,
+        water: Number(water.value) || 0,
+        shopee: Number(shopee.value) || 0,
+        other: []
+    };
 
-    const titles = document.querySelectorAll(".otherTitle");
-    const amounts = document.querySelectorAll(".otherAmount");
+    const titles = document.querySelectorAll(".otherTitle");
+    const amounts = document.querySelectorAll(".otherAmount");
 
-    for (let i = 0; i < titles.length; i++) {
-        data.other.push({
-            title: titles[i].value,
-            amount: amounts[i].value
+    // Collect dynamic commitments
+    for (let i = 0; i < titles.length; i++) {
+        // Only save items with a title or amount
+        if (titles[i].value || amounts[i].value) {
+            data.other.push({
+                title: titles[i].value,
+                amount: Number(amounts[i].value) || 0
+            });
+        }
+    }
+
+    // Use .set() to save the entire commitments object under the user's path
+    db.ref('users/' + USER_ID + '/commitments').set(data)
+        .then(() => {
+            alert("Commitments Saved to Cloud!");
+        })
+        .catch(error => {
+            console.error("Save failed:", error);
+            alert("Save failed! Check console for errors.");
         });
-    }
-
-    localStorage.setItem("commitments", JSON.stringify(data));
-
-    alert("Saved!");
 }
 
-// Load saved values
+// *** LOAD FROM FIREBASE ***
 function loadData() {
-    const saved = JSON.parse(localStorage.getItem("commitments"));
+    db.ref('users/' + USER_ID + '/commitments').once('value')
+        .then(snapshot => {
+            const saved = snapshot.val();
+            
+            // Clear existing dynamic fields before loading
+            document.getElementById("extraFields").innerHTML = "";
 
-    if (!saved) return;
+            if (!saved) {
+                // Initialize totals even if no data exists
+                updateTotal();
+                return;
+            }
 
-    rent.value = saved.rent;
-    motorcycle.value = saved.motorcycle;
-    telco.value = saved.telco;
-    electric.value = saved.electric;
-    water.value = saved.water;
-    shopee.value = saved.shopee;
+            // Populate fixed fields
+            rent.value = saved.rent || '';
+            motorcycle.value = saved.motorcycle || '';
+            telco.value = saved.telco || '';
+            electric.value = saved.electric || '';
+            water.value = saved.water || '';
+            shopee.value = saved.shopee || '';
 
-    if (saved.other) {
-        saved.other.forEach(item => {
-            addExtraField();
-            const titles = document.querySelectorAll(".otherTitle");
-            const amounts = document.querySelectorAll(".otherAmount");
-            titles[titles.length - 1].value = item.title;
-            amounts[amounts.length - 1].value = item.amount;
+            // Populate dynamic 'other' fields
+            if (saved.other) {
+                // Object.values is used to handle Firebase object structure (which may not be a perfect array)
+                Object.values(saved.other).forEach(item => { 
+                    addExtraField();
+                    const titles = document.querySelectorAll(".otherTitle");
+                    const amounts = document.querySelectorAll(".otherAmount");
+                    titles[titles.length - 1].value = item.title;
+                    amounts[amounts.length - 1].value = item.amount;
+                });
+            }
+            // Update the total display after loading
+            updateTotal(); 
+        })
+        .catch(error => {
+            console.error("Load failed:", error);
+            updateTotal(); // Still calculate zero total if load fails
         });
-    }
 }
 
 // Page navigation
 function goBack() {
-    window.location.href = "SalaryInput.html";
+    window.location.href = "SalaryInput.html";
 }
 
 function goHome() {
-    window.location.href = "Home.html";
+    window.location.href = "Home.html";
 }
 </script>
 
