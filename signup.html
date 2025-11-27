@@ -106,37 +106,35 @@ async function hash(text) {
     const buffer = new TextEncoder().encode(text);
     const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
     return Array.from(new Uint8Array(hashBuffer))
-                .map(b => b.toString(16).padStart(2, "0"))
-                .join("");
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
 }
 
 window.signUp = async function () {
     const user = document.getElementById("username").value.trim();
     const pass = document.getElementById("password").value;
-    const rep  = document.getElementById("repeat").value;
+    const rep = document.getElementById("repeat").value;
 
     if (!user || !pass || !rep) {
-        alert("Please fill in all fields.");
+        alert("Fill in all fields");
         return;
     }
 
     if (pass !== rep) {
-        alert("Passwords do not match!");
+        alert("Passwords do not match");
         return;
     }
 
     const userRef = ref(db, "users/" + user);
 
-    // Check if username exists
     const snap = await get(userRef);
     if (snap.exists()) {
-        alert("Username already taken. Try another one.");
+        alert("Username already exists");
         return;
     }
 
     const hashed = await hash(pass);
 
-    // Save the new account
     await set(userRef, {
         password: hashed,
         salary: null,
@@ -145,10 +143,12 @@ window.signUp = async function () {
         homeBudget: {}
     });
 
-    alert("Account created! You can now login.");
+    alert("Account created!");
     window.location.href = "login.html";
 };
 </script>
 
+
 </body>
 </html>
+
