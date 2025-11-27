@@ -115,10 +115,11 @@
     <h2>Budget Dashboard</h2>
 
     <div class="top-buttons">
-        <button class="resetHome" onclick="resetHome()">Reset</button>
-        <button class="resetAll" onclick="resetAll()">Reset All</button>
-        <button class="inputData" onclick="goInput()">Input Data</button>
-    </div>
+    <button id="btnResetHome" class="resetHome">Reset</button>
+    <button id="btnResetAll" class="resetAll">Reset All</button>
+    <button id="btnInputData" class="inputData">Input Data</button>
+</div>
+
 
     <label>From:</label>
     <input type="date" id="dateFrom" onchange="saveDates(); updateDashboard()">
@@ -458,7 +459,24 @@ window.onload = async function() {
     // call updateDashboard (safe even if dates not set)
     window.updateDashboard();
 };
+    //------------------------------------------------------------
+// Attach button event listeners (Fix for module-scoped functions)
+//------------------------------------------------------------
+document.getElementById("btnResetHome").addEventListener("click", () => {
+    if (window.resetHome) window.resetHome();
+});
+
+document.getElementById("btnResetAll").addEventListener("click", () => {
+    if (window.resetAll) window.resetAll();
+});
+
+document.getElementById("btnInputData").addEventListener("click", () => {
+    if (window.goInput) window.goInput();
+    else window.location.href = "SalaryInput.html";
+});
+
 </script>
 
 </body>
 </html>
+
