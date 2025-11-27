@@ -90,7 +90,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-    // Configuration provided by the user
     const firebaseConfig = {
       apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
       authDomain: "budgetcalculator-22ef5.firebaseapp.com",
@@ -101,22 +100,17 @@
       measurementId: "G-2LL0GD2K30"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    
-    // Define the fixed user ID - MUST match across all HTML files
     const USER_ID = "guest_user_1"; 
 </script>
 <script>
 // *** LOAD FROM FIREBASE ON PAGE LOAD ***
 window.onload = function () {
-    // Firebase database is asynchronous, so we use .once()
     db.ref('users/' + USER_ID).once('value')
         .then(snapshot => {
             const data = snapshot.val();
             if (data) {
-                // Check if the nodes exist and populate
                 if (data.salary) salary.value = data.salary;
                 if (data.partTime) partTime.value = data.partTime;
             }
@@ -128,7 +122,6 @@ window.onload = function () {
 
 // *** SAVE TO FIREBASE ***
 function saveData() {
-    // We use .update() to save both values to the user's root path
     db.ref('users/' + USER_ID).update({
         salary: Number(salary.value) || 0,
         partTime: Number(partTime.value) || 0
