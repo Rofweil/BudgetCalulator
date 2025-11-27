@@ -6,7 +6,7 @@
 <style>
     body {
         font-family: Arial, sans-serif;
-        background: #f2faf3;
+        background: #edf7ef;
         margin: 0;
         padding: 20px;
     }
@@ -15,365 +15,134 @@
         max-width: 900px;
         margin: auto;
         background: white;
-        padding: 25px;
-        border-radius: 14px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        padding: 28px;
+        border-radius: 16px;
+        box-shadow: 0 6px 22px rgba(0,0,0,0.12);
     }
 
     h2 {
         text-align: center;
-        color: #2c7a3f;
-        margin-bottom: 20px;
-        font-size: 26px;
+        color: #2d7a44;
+        margin-bottom: 25px;
+        font-size: 27px;
+        font-weight: 700;
     }
 
+    /* Buttons */
     .top-buttons {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
+        gap: 10px;
     }
 
     button {
-        padding: 10px 16px;
+        flex: 1;
+        padding: 12px 0;
         border: none;
-        border-radius: 8px;
+        border-radius: 10px;
         cursor: pointer;
         font-weight: bold;
         color: white;
+        font-size: 15px;
         transition: 0.2s;
     }
 
     button:hover {
-        opacity: 0.85;
-        transform: scale(0.98);
+        opacity: 0.88;
+        transform: translateY(-2px);
     }
 
-    .resetHome { background: #f6a03f; }
-    .resetAll { background: #e44545; }
-    .inputData { background: #2e8d47; }
+    .resetHome  { background: #f2a244; }
+    .resetAll   { background: #e25252; }
+    .inputData  { background: #2e9a4a; }
 
+    /* Labels + Inputs */
     label {
         font-weight: bold;
-        margin-top: 10px;
+        margin-top: 12px;
         display: inline-block;
-        color: #2b7a38;
+        color: #2d7a44;
+        font-size: 15px;
     }
 
     input[type="date"], input[type="number"] {
-        padding: 9px;
-        margin-top: 5px;
+        padding: 10px 12px;
+        margin-top: 4px;
         margin-bottom: 15px;
-        border-radius: 8px;
-        border: 1px solid #8dcc90;
+        border-radius: 10px;
+        border: 1px solid #98d6a5;
         font-size: 15px;
-        width: 220px;
+        width: 230px;
+        outline: none;
+        transition: 0.15s;
+        background: #ffffff;
     }
 
+    input[type="date"]:focus,
+    input[type="number"]:focus {
+        border-color: #2e9a4a;
+        box-shadow: 0 0 6px rgba(46,154,74,0.35);
+    }
+
+    /* Summary Box */
     .summary {
-        background: #dff4e3;
-        padding: 16px;
-        border-radius: 12px;
+        background: #d9f3df;
+        padding: 18px;
+        border-radius: 14px;
         margin-bottom: 20px;
         font-size: 16px;
+        line-height: 1.6;
+        border: 1px solid #bfe8c8;
     }
 
     .summary p span {
         font-weight: bold;
-        color: #146b2a;
+        color: #1f6a31;
     }
 
+    /* Table */
     table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 20px;
+        margin-top: 18px;
         font-size: 15px;
-    }
-
-    th, td {
-        border: 1px solid #b5dfbb;
-        padding: 10px;
-        text-align: center;
+        border-radius: 10px;
+        overflow: hidden;
     }
 
     th {
         background: #bfe6c7;
+        padding: 12px;
+        border: 1px solid #b5dfbb;
         font-weight: bold;
     }
 
+    td {
+        padding: 12px;
+        border: 1px solid #ccebd2;
+        background: #ffffff;
+    }
+
+    tr:nth-child(even) td {
+        background: #f4faf5;
+    }
+
+    /* Budget Used Input */
     .usedBudget {
-        width: 80px;
-        padding: 6px;
+        width: 90px;
+        padding: 7px;
         border: 1px solid #8dcc90;
-        border-radius: 6px;
+        border-radius: 8px;
+        font-size: 15px;
+        outline: none;
+    }
+
+    .usedBudget:focus {
+        border-color: #2e9a4a;
+        box-shadow: 0 0 5px rgba(46,154,74,0.35);
     }
 
 </style>
 </head>
 <body>
-
-<div class="container">
-    <h2>Budget Dashboard</h2>
-
-    <div class="top-buttons">
-        <button class="resetHome" onclick="resetHome()">Reset</button>
-        <button class="resetAll" onclick="resetAll()">Reset All</button>
-        <button class="inputData" onclick="goInput()">Input Data</button>
-    </div>
-
-    <label>From:</label>
-    <input type="date" id="dateFrom" onchange="saveDates(); updateDashboard()">
-    <label>To:</label>
-    <input type="date" id="dateTo" onchange="saveDates(); updateDashboard()">
-
-    <div class="summary">
-        <p>Total Income: RM <span id="totalIncome">0</span></p>
-        <p>Total Commitments: RM <span id="totalCommit">0</span></p>
-        <p>Net Income: RM <span id="netIncome">0</span></p>
-        <p>Days Left Until Salary: <span id="daysLeft">0</span></p>
-        <p>Daily Budget (Base): RM <span id="dailyBudget">0</span></p>
-        <p>Remaining Net Income: RM <span id="remainingNet">0</span></p>
-    </div>
-
-    <table id="budgetTable">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Daily Budget</th>
-                <th>Budget Used</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<script>
-    // Configuration provided by the user
-    const firebaseConfig = {
-      apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
-      authDomain: "budgetcalculator-22ef5.firebaseapp.com",
-      projectId: "budgetcalculator-22ef5",
-      storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
-      messagingSenderId: "574952478496",
-      appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
-      measurementId: "G-2LL0GD2K30" // Included but not used by this app logic
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    
-    // Define the fixed user ID - MUST match across all HTML files
-    const USER_ID = "guest_user_1"; 
-</script>
-<script>
-// Helper function to get a date string in YYYY-MM-DD format based on local time
-function getLocalISOString(date) {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-}
-
-// *** ASYNCHRONOUS DATA LOADING ***
-async function loadIncomeCommitments() {
-    const snapshot = await db.ref('users/' + USER_ID).once('value');
-    const data = snapshot.val() || {};
-
-    const salary = Number(data.salary || 0);
-    const partTime = Number(data.partTime || 0);
-    const commitments = data.commitments || {};
-
-    let totalCommit = 0;
-    
-    // Sum fixed commitments
-    const keys = ["rent","motorcycle","telco","electric","water","shopee"];
-    keys.forEach(k => totalCommit += Number(commitments[k] || 0));
-    
-    // Sum dynamic commitments (Handles Firebase object structure)
-    if (commitments.other) {
-        Object.values(commitments.other).forEach(o => totalCommit += Number(o.amount || 0));
-    }
-    
-    return { totalIncome: salary + partTime, totalCommit };
-}
-
-// *** SAVE BUDGET TO FIREBASE ***
-function saveUsedBudget(dateStr, value) {
-    const numValue = Number(value) || 0;
-    
-    db.ref('users/' + USER_ID + '/homeBudget/' + dateStr).set(numValue)
-        .then(() => {
-            // Re-calculate summary after saving new value
-            updateDashboard(); 
-        })
-        .catch(error => console.error("Save budget failed:", error));
-}
-
-// *** ASYNCHRONOUS UPDATE SUMMARY ***
-async function updateSummaryOnly(base, from, to) {
-    const { totalIncome, totalCommit } = await loadIncomeCommitments();
-    const netIncome = totalIncome - totalCommit;
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const oneDay = 86400000;
-    
-    // Days Left Until Salary (using the 'To' date as salary date)
-    const daysLeft = Math.ceil((to - today) / oneDay);
-    
-    // Load used budget data to calculate total used
-    const snapshot = await db.ref('users/' + USER_ID + '/homeBudget').once('value');
-    const usedData = snapshot.val() || {};
-
-    let totalUsed = 0;
-    Object.values(usedData).forEach(v => totalUsed += v);
-    const remainingNet = netIncome - totalUsed;
-
-    document.getElementById("totalIncome").textContent = totalIncome.toFixed(2);
-    document.getElementById("totalCommit").textContent = totalCommit.toFixed(2);
-    document.getElementById("netIncome").textContent = netIncome.toFixed(2);
-    document.getElementById("daysLeft").textContent = Math.max(0, daysLeft);
-    document.getElementById("dailyBudget").textContent = base.toFixed(2);
-    document.getElementById("remainingNet").textContent = remainingNet.toFixed(2);
-}
-
-// *** ASYNCHRONOUS TABLE GENERATION ***
-async function generateTable(from, to, base) {
-    const tbody = document.querySelector("#budgetTable tbody");
-    tbody.innerHTML = "";
-
-    // Load used budget data from Firebase
-    const snapshot = await db.ref('users/' + USER_ID + '/homeBudget').once('value');
-    const usedData = snapshot.val() || {};
-
-    const today = new Date(); today.setHours(0,0,0,0);
-    const oneDay = 86400000;
-    const tomorrow = new Date(today.getTime() + oneDay);
-    
-    const todayStr = getLocalISOString(today);
-    const tomorrowStr = getLocalISOString(tomorrow);
-
-
-    function leftover(yesterdayStr) {
-        const yesterdayUsed = usedData[yesterdayStr];
-        if (yesterdayUsed === undefined || yesterdayUsed === null) return 0;
-        return base - yesterdayUsed;
-    }
-
-    let current = new Date(from);
-    current.setHours(0,0,0,0);
-
-    while (current <= to) {
-        const dateStr = getLocalISOString(current);
-        const row = document.createElement("tr");
-
-        const dateCell = document.createElement("td");
-        dateCell.textContent = dateStr;
-
-        const budgetCell = document.createElement("td");
-        let show = "-";
-
-        if (dateStr === todayStr) {
-            const y = new Date(today.getTime() - oneDay);
-            const yStr = getLocalISOString(y);
-            show = (base + leftover(yStr)).toFixed(2);
-        }
-        else if (dateStr === tomorrowStr) {
-            const yStr = todayStr;
-            show = (base + leftover(yStr)).toFixed(2);
-        }
-
-        budgetCell.textContent = show;
-
-        const usedCell = document.createElement("td");
-        const input = document.createElement("input");
-        input.type = "number";
-        input.className = "usedBudget";
-        input.value = usedData[dateStr] !== undefined ? usedData[dateStr] : ""; 
-        input.oninput = () => saveUsedBudget(dateStr, input.value);
-        usedCell.appendChild(input);
-
-        row.appendChild(dateCell);
-        row.appendChild(budgetCell);
-        row.appendChild(usedCell);
-        tbody.appendChild(row);
-
-        current.setDate(current.getDate() + 1);
-    }
-}
-
-// *** ASYNCHRONOUS DASHBOARD UPDATE ***
-async function updateDashboard() {
-    const from = getLocalDate("dateFrom");
-    const to = getLocalDate("dateTo");
-    if (!from || !to || from > to) return;
-
-    const { totalIncome, totalCommit } = await loadIncomeCommitments();
-    const net = totalIncome - totalCommit;
-
-    const oneDay = 86400000;
-    const totalDays = Math.ceil((to - from) / oneDay) + 1;
-    const base = net / totalDays;
-
-    await updateSummaryOnly(base, from, to);
-    await generateTable(from, to, base);
-}
-
-// *** SAVE DATES TO FIREBASE ***
-function saveDates() {
-    const from = document.getElementById("dateFrom").value;
-    const to = document.getElementById("dateTo").value;
-    
-    db.ref('users/' + USER_ID + '/homeDates').set({ from, to })
-        .catch(error => console.error("Save dates failed:", error));
-}
-
-// *** RESET BUDGET DATA IN FIREBASE ***
-function resetHome() {
-    if (confirm("Reset only Home budget data? This will clear all recorded daily spending.")) {
-        db.ref('users/' + USER_ID + '/homeBudget').set(null)
-            .then(() => updateDashboard())
-            .catch(error => console.error("Reset home failed:", error));
-    }
-}
-
-// *** RESET ALL DATA IN FIREBASE ***
-function resetAll() {
-    if (confirm("Reset ALL data? This will clear all income, commitments, and budget history.")) {
-        db.ref('users/' + USER_ID).set(null)
-            .then(() => location.reload())
-            .catch(error => console.error("Reset all failed:", error));
-    }
-}
-
-function goInput() {
-    window.location.href = "SalaryInput";
-}
-
-function getLocalDate(id){ 
-    const p=document.getElementById(id).value.split("-"); 
-    return new Date(p[0],p[1]-1,p[2]); 
-}
-
-// *** WINDOW ONLOAD: LOAD DATES FROM FIREBASE ***
-window.onload = function () {
-    db.ref('users/' + USER_ID + '/homeDates').once('value')
-        .then(snapshot => {
-            const saved = snapshot.val() || {};
-            if (saved.from) document.getElementById("dateFrom").value = saved.from;
-            if (saved.to) document.getElementById("dateTo").value = saved.to;
-            updateDashboard();
-        })
-        .catch(error => {
-            console.error("Initial data load failed:", error);
-            updateDashboard();
-        });
-};
-</script>
-
-</body>
-</html>
-
