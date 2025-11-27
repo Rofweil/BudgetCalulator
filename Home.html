@@ -443,27 +443,32 @@ window.resetAll = async function() {
     if (!confirm("Reset ALL data? This will delete Salary, Part-Time, Commitments, and all Home data.")) return;
 
     try {
-        // 1. Remove salary & part-time (root level)
+        // 1. Remove salary & part-time
         await remove(ref(db, "salary"));
         await remove(ref(db, "partTime"));
 
-        // 2. Remove global commitments
-        await remove(ref(db, "commitments"));
+        // 2. Remove global commitments completely
+        const commitRef = ref(db, "commitments");
+        await remove(commitRef); // Removes object
 
-        // 3. Remove all user-specific home data
-        await remove(ref(db, `${userBase}`));   // removes homeDates + homeBudget
+        // Safety: also remove children explicitly (Firebase edge case when values are empty string)
+        const commitKeys = ["electric", "motorcycle", "rent", "shopee", "telco", "water"];
+        for (const key of commitKeys) {
+            await remove(ref(db, `commitments/${key}`));
+        }
 
-        // OPTIONAL:
-        // If you ever add more global entries, you can clear them here.
+        // 3. Remove all user-specific data
+        await remove(ref(db, `${userBase}`)); // removes homeDates + homeBudget + future nodes
 
-        alert("All data has been reset.");
+        alert("All data has been fully reset.");
         location.reload();
 
     } catch (err) {
         console.error("Error resetting all:", err);
-        alert("Reset All failed. See console.");
+        alert("Reset All failed. Check console.");
     }
 };
+
 
 
 /* ----------------------------
@@ -510,6 +515,7 @@ document.getElementById("btnInputData").addEventListener("click", () => {
 
 </body>
 </html>
+
 
 
 
