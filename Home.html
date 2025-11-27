@@ -106,6 +106,24 @@
         border: 1px solid #8dcc90;
         border-radius: 6px;
     }
+    
+    .healthBarContainer {
+    width: 100%;
+    height: 22px;
+    background: #d9e9dc;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+.healthBarFill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, red, orange, yellow, #2ecc71);
+    transition: width 0.4s ease;
+    border-radius: 12px;
+}
+
 
 </style>
 </head>
@@ -133,6 +151,14 @@
         <p>Days Left Until Salary: <span id="daysLeft">0</span></p>
         <p>Daily Budget (Base): RM <span id="dailyBudget">0</span></p>
         <p>Remaining Net Income: RM <span id="remainingNet">0</span></p>
+        <div style="margin-top: 15px;">
+    <label style="font-weight:bold;color:#2b7a38;">Budget Health:</label>
+    <div class="healthBarContainer">
+        <div class="healthBarFill" id="healthBarFill"></div>
+    </div>
+    <div id="healthPercent" style="margin-top:5px;font-weight:bold;color:#146b2a;">0%</div>
+</div>
+
     </div>
 
     <table id="budgetTable">
@@ -310,6 +336,30 @@ async function updateSummaryOnly(base, from, to) {
         document.getElementById("daysLeft").textContent = daysLeft;
         document.getElementById("dailyBudget").textContent = base.toFixed(2);
         document.getElementById("remainingNet").textContent = remainingNet.toFixed(2);
+        // -------- HEALTH BAR --------
+let percent = 0;
+if (totalIncome > 0) {
+    percent = (remainingNet / totalIncome) * 100;
+    if (percent < 0) percent = 0;
+    if (percent > 100) percent = 100;
+}
+
+let bar = document.getElementById("healthBarFill");
+let txt = document.getElementById("healthPercent");
+
+// Smooth width fill
+bar.style.width = percent + "%";
+
+// Dynamic color change
+if (percent <= 20) bar.style.background = "red";
+else if (percent <= 40) bar.style.background = "orange";
+else if (percent <= 60) bar.style.background = "gold";
+else if (percent <= 80) bar.style.background = "#a2e05e";
+else bar.style.background = "#2ecc71";
+
+// Update percentage text
+txt.textContent = percent.toFixed(1) + "%";
+
     } catch (err) {
         console.error("Error updating summary:", err);
     }
@@ -515,6 +565,7 @@ document.getElementById("btnInputData").addEventListener("click", () => {
 
 </body>
 </html>
+
 
 
 
