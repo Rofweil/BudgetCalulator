@@ -129,6 +129,14 @@
 </style>
 </head>
 <body>
+<script>
+    // Block page if not logged in
+    const USER = localStorage.getItem("loggedUser");
+    if (!USER) {
+        alert("You must login first.");
+        window.location.href = "login.html";
+    }
+</script>
 
 <p style="text-align:right; color:#2c7a3f; font-weight:bold;">
     Logged in as: <span id="welcomeUser"></span>
@@ -198,11 +206,7 @@ const db = getDatabase(app);
 
 const USER = localStorage.getItem("loggedUser");
 
-if (!USER) {
-    alert("You must login first.");
-    window.location.href = "login.html";
-    throw new Error("Not logged in");
-}
+
 
 const userBase = `users/${USER}`;
 document.getElementById("welcomeUser").textContent = USER;
@@ -220,3 +224,4 @@ document.getElementById("btnLogout").onclick = () => {
 
 </body>
 </html>
+
