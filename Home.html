@@ -197,29 +197,50 @@ async function loadIncomeCommitments() {
     try {
         const salarySnap = await get(ref(db, "salary"));
         const partSnap = await get(ref(db, "partTime"));
-        const commitSnap = await get(ref(db, `${userBase}/commitments`));
+
+        // FIXED: commitments are stored at root level
+        const commitSnap = await get(ref(db, "commitments"));
 
         const salary = Number(salarySnap.exists() ? salarySnap.val() : 0);
         const partTime = Number(partSnap.exists() ? partSnap.val() : 0);
-        const commitments = commitSnap.exists() ? commitSnap.val() : {};
 
+        let commitments = commitSnap.exists() ? commitSnap.val() : {};
         let totalCommit = 0;
-        const keys = ["rent","motorcycle","telco","electric","water","shopee"];
-        keys.forEach(k => totalCommit += Number(commitments[k] || 0));
 
-        // handle other (array or object)
+        const mainKeys = ["rent", "motorcycle", "telco", "electric", "water", "shopee"];
+
+        mainKeys.forEach(key => {
+            const val = commitments[key];
+            const num = Number(val);
+            if (!Number.isNaN(num) && num > 0) {
+                totalCommit += num;
+            }
+        });
+
+        // Future-proof: support any "other" commitments
         if (commitments.other) {
             if (Array.isArray(commitments.other)) {
-                commitments.other.forEach(o => totalCommit += Number(o.amount || 0));
-            } else {
-                Object.values(commitments.other).forEach(o => {
-                    if (o && typeof o === "object") totalCommit += Number(o.amount || 0);
-                    else totalCommit += Number(o || 0);
+                commitments.other.forEach(item => {
+                    const num = Number(item.amount || 0);
+                    if (!Number.isNaN(num) && num > 0) {
+                        totalCommit += num;
+                    }
+                });
+            } else if (typeof commitments.other === "object") {
+                Object.values(commitments.other).forEach(item => {
+                    const num = Number(item.amount || item || 0);
+                    if (!Number.isNaN(num) && num > 0) {
+                        totalCommit += num;
+                    }
                 });
             }
         }
 
-        return { totalIncome: salary + partTime, totalCommit };
+        return {
+            totalIncome: salary + partTime,
+            totalCommit
+        };
+
     } catch (err) {
         console.error("Error loading income/commitments:", err);
         return { totalIncome: 0, totalCommit: 0 };
@@ -479,4 +500,5 @@ document.getElementById("btnInputData").addEventListener("click", () => {
 
 </body>
 </html>
+
 
