@@ -5,10 +5,7 @@
 <title>Budget Saver</title>
 
 <style>
-    /* --- START CSS STYLES --- 
-       These rules define the green background, centered white container,
-       rounded corners, button colors, and input styling.
-    */
+    /* --- START CSS STYLES --- */
     body {
         font-family: Arial, sans-serif;
         margin: 0;
@@ -28,7 +25,7 @@
     h2 {
         text-align: center;
         color: #2e7d32;
-        margin-bottom: 10px;
+        margin-bottom: 15px;
     }
 
     label {
@@ -39,29 +36,31 @@
     }
 
     input {
-        width: 75%;
-        padding: 8px;
+        width: 100%;             /* FIXED — full width for better look */
+        padding: 10px;
         margin-top: 5px;
         border: 1px solid #81c784;
         border-radius: 8px;
         background: #f1f8f6;
-        font-size: 15px;
+        font-size: 16px;
     }
 
     .buttons {
-        margin-top: 20px;
+        margin-top: 25px;
         display: flex;
         justify-content: space-between;
+        gap: 10px;
     }
 
     button {
-        width: 32%;
+        flex: 1;
         padding: 12px;
         border: none;
         border-radius: 8px;
         font-weight: bold;
         color: white;
         cursor: pointer;
+        font-size: 15px;
     }
 
     .home { background: #9e9e9e; }
@@ -94,7 +93,6 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-    // ⚠️ WARNING: Ensure this config is identical across all files (Home.html, Commitment.html)
     const firebaseConfig = {
       apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
       authDomain: "budgetcalculator-22ef5.firebaseapp.com",
@@ -109,48 +107,43 @@
     const db = firebase.database();
     const USER_ID = "guest_user_1"; 
 </script>
+
 <script>
-// *** LOAD FROM FIREBASE ON PAGE LOAD ***
+// Load saved data when page opens
 window.onload = function () {
     db.ref('users/' + USER_ID).once('value')
         .then(snapshot => {
             const data = snapshot.val();
             if (data) {
-                if (data.salary) salary.value = data.salary;
-                if (data.partTime) partTime.value = data.partTime;
+                salary.value = data.salary || "";
+                partTime.value = data.partTime || "";
             }
         })
-        .catch(error => {
-            console.error("Income Load failed:", error);
-        });
+        .catch(error => console.error("Load Error:", error));
 };
 
-// *** SAVE TO FIREBASE ***
+// Save to Firebase
 function saveData() {
     db.ref('users/' + USER_ID).update({
         salary: Number(salary.value) || 0,
         partTime: Number(partTime.value) || 0
-    })
-    .then(() => {
+    }).then(() => {
         alert("Saved to Cloud!");
-    })
-    .catch(error => {
-        console.error("Save failed:", error);
-        alert("Save failed! Check console for errors.");
+    }).catch(err => {
+        console.error(err);
+        alert("Save Failed!");
     });
 }
 
-// NEXT → commitment.html
+// Navigation
 function goNext() {
-    window.location.href = "Commitment";
+    window.location.href = "Commitment.html";   // FIXED
 }
 
-// HOME → Home.html
 function goHome() {
-    window.location.href = "Home";
+    window.location.href = "Home.html";          // FIXED
 }
 </script>
 
 </body>
 </html>
-
