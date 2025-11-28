@@ -204,18 +204,26 @@ const db = getDatabase(app);
 /* ----------------------------------------------------------
    3. LOGIN VALIDATION (Fully Fixed)
 ------------------------------------------------------------*/
-const USER = localStorage.getItem("loggedUser");
+// LOGIN CHECK (runs AFTER browser loads everything)
+window.addEventListener("DOMContentLoaded", () => {
+    const USER = localStorage.getItem("loggedUser");
 
-if (!USER || USER.trim() === "") {
-    // prevent infinite alert loop
-    localStorage.removeItem("loggedUser");
-    alert("You must login first!");
-    window.location.href = "login.html";
-    throw new Error("BLOCK: Not logged in");
-}
+    // Defensive: empty, null, undefined, "null", "undefined", spaces
+    if (!USER || USER.trim() === "" || USER === "null" || USER === "undefined") {
+        localStorage.removeItem("loggedUser");
+        alert("You must login first!");
+        window.location.href = "login.html";
+        return;
+    }
+
+    // Set global variable for rest of the script
+    window.CURRENT_USER = USER;
+    document.getElementById("welcomeUser").textContent = USER;
+});
+
 
 document.getElementById("welcomeUser").textContent = USER;
-const userBase = `users/${USER}`;
+const userBase() = () => `users/${window.CURRENT_USER}`;
 
 /* ----------------------------------------------------------
    4. Helper functions
@@ -240,9 +248,9 @@ function parseInputDate(id) {
    5. Load Income + Commitments
 ------------------------------------------------------------*/
 async function loadIncomeCommitments() {
-    const salarySnap = await get(ref(db, `${userBase}/salary`));
-    const partSnap = await get(ref(db, `${userBase}/partTime`));
-    const commitSnap = await get(ref(db, `${userBase}/commitments`));
+    const salarySnap = await get(ref(db, `${userBase()}/salary`));
+    const partSnap = await get(ref(db, `${userBase()}/partTime`));
+    const commitSnap = await get(ref(db, `${userBase()}/commitments`));
 
     const salary = Number(salarySnap.val() || 0);
     const partTime = Number(partSnap.val() || 0);
@@ -283,7 +291,7 @@ async function loadIncomeCommitments() {
    6. Save daily spending (manual table update)
 ------------------------------------------------------------*/
 window.saveUsedBudget = async function (dateStr, val) {
-    const node = ref(db, `${userBase}/homeBudget/${dateStr}`);
+    const node = ref(db, `${userBase()}/homeBudget/${dateStr}`);
 
     if (val === "" || val === null) {
         await remove(node);
@@ -305,7 +313,7 @@ document.getElementById("quickInput").addEventListener("keydown", async e => {
         const today = new Date();
         const todayStr = formatLocalDate(today);
 
-        await set(ref(db, `${userBase}/homeBudget/${todayStr}`), value);
+        await set(ref(db, `${userBase()}/homeBudget/${todayStr}`), value);
 
         e.target.value = "";
         updateDashboard();
@@ -320,7 +328,7 @@ async function updateSummary(baseDaily, from, to) {
     const netIncome = totalIncome - totalCommit;
 
     // Sum used spending
-    const usedSnap = await get(ref(db, `${userBase}/homeBudget`));
+    const usedSnap = await get(ref(db, `${userBase()}/homeBudget`));
     let usedTotal = 0;
     if (usedSnap.exists()) {
         Object.values(usedSnap.val()).forEach(v => usedTotal += Number(v));
@@ -366,7 +374,7 @@ async function generateTable(from, to, baseDaily) {
     const tbody = document.querySelector("#budgetTable tbody");
     tbody.innerHTML = "";
 
-    const usedSnap = await get(ref(db, `${userBase}/homeBudget`));
+    const usedSnap = await get(ref(db, `${userBase()}/homeBudget`));
     const used = usedSnap.exists() ? usedSnap.val() : {};
 
     let current = new Date(from);
@@ -442,7 +450,7 @@ window.saveDates = async function () {
     const from = document.getElementById("dateFrom").value;
     const to = document.getElementById("dateTo").value;
 
-    await update(ref(db, `${userBase}/homeDates`), { from, to });
+    await update(ref(db, `${userBase()}/homeDates`), { from, to });
 };
 
 /* ----------------------------------------------------------
@@ -450,8 +458,8 @@ window.saveDates = async function () {
 ------------------------------------------------------------*/
 window.resetHome = async function () {
     if (!confirm("Reset only Home data?")) return;
-    await remove(ref(db, `${userBase}/homeBudget`));
-    await remove(ref(db, `${userBase}/homeDates`));
+    await remove(ref(db, `${userBase()}/homeBudget`));
+    await remove(ref(db, `${userBase()}/homeDates`));
     document.getElementById("dateFrom").value = "";
     document.getElementById("dateTo").value = "";
     updateDashboard();
@@ -459,7 +467,7 @@ window.resetHome = async function () {
 
 window.resetAll = async function () {
     if (!confirm("RESET ALL DATA for this user?")) return;
-    await remove(ref(db, `${userBase}`));
+    await remove(ref(db, `${userBase()}`));
     alert("All data cleared.");
     location.reload();
 };
@@ -480,7 +488,7 @@ document.getElementById("btnLogout").onclick = () => {
    14. Page Load
 ------------------------------------------------------------*/
 window.onload = async () => {
-    const dSnap = await get(ref(db, `${userBase}/homeDates`));
+    const dSnap = await get(ref(db, `${userBase()}/homeDates`));
     if (dSnap.exists()) {
         const d = dSnap.val();
         if (d.from) document.getElementById("dateFrom").value = d.from;
@@ -493,3 +501,4 @@ window.onload = async () => {
 
 </body>
 </html>
+
