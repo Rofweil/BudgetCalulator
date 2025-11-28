@@ -74,7 +74,10 @@
         font-size: 15px;
     }
 
-    .summary p span { font-weight: bold; color: #146b2a; }
+    .summary p span {
+        font-weight: bold;
+        color: #146b2a;
+    }
 
     .healthBarContainer {
         width: 100%;
@@ -139,6 +142,7 @@
 
     <label>From:</label>
     <input type="date" id="dateFrom" onchange="saveDates(); updateDashboard()">
+
     <label style="margin-left:20px;">To:</label>
     <input type="date" id="dateTo" onchange="saveDates(); updateDashboard()">
 
@@ -187,7 +191,7 @@ const firebaseConfig = {
     apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
     authDomain: "budgetcalculator-22ef5.firebaseapp.com",
     projectId: "budgetcalculator-22ef5",
-    storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
+    storageBucket: "budgetcalculator-22ef5.firebasedorage.app",
     messagingSenderId: "574952478496",
     appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
     databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -196,25 +200,32 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+let CURRENT_USER = null;
+
 /* ----------------------------------------------------------
-   LOGIN CHECK (GLOBAL, CORRECT)
+   LOGIN CHECK — runs AFTER DOM is ready (fixed!)
 ------------------------------------------------------------*/
-const CURRENT_USER = localStorage.getItem("loggedUser");
+document.addEventListener("DOMContentLoaded", async () => {
 
-if (!CURRENT_USER || CURRENT_USER.trim() === "" || CURRENT_USER === "null" || CURRENT_USER === "undefined") {
-    localStorage.removeItem("loggedUser");
-    alert("You must login first!");
-    window.location.href = "login.html";
-    throw new Error("User not logged in — script stopped");
-}
+    CURRENT_USER = localStorage.getItem("loggedUser");
 
-document.getElementById("welcomeUser").textContent = CURRENT_USER;
+    if (!CURRENT_USER || CURRENT_USER.trim() === "" || CURRENT_USER === "null" || CURRENT_USER === "undefined") {
+        localStorage.removeItem("loggedUser");
+        alert("You must login first!");
+        window.location.href = "login.html";
+        return;
+    }
 
-/* User base path */
+    document.getElementById("welcomeUser").textContent = CURRENT_USER;
+
+    await loadSavedDates();
+    updateDashboard();
+});
+
 const userBase = () => `users/${CURRENT_USER}`;
 
 /* ----------------------------------------------------------
-   Helpers
+   Utilities
 ------------------------------------------------------------*/
 function formatLocalDate(date) {
     const y = date.getFullYear();
@@ -244,19 +255,19 @@ async function loadIncomeCommitments() {
 
     let totalCommit = 0;
 
-    const mainList = ["rent","motorcycle","telco","electric","water","shopee"];
-    mainList.forEach(key => {
-        const n = Number(commitments[key] || 0);
+    const keys = ["rent","motorcycle","telco","electric","water","shopee"];
+    keys.forEach(k => {
+        const n = Number(commitments[k] || 0);
         if (!isNaN(n)) totalCommit += n;
     });
 
     if (commitments.other) {
-        const otherList = Array.isArray(commitments.other)
+        const list = Array.isArray(commitments.other)
             ? commitments.other
             : Object.values(commitments.other);
 
-        otherList.forEach(item => {
-            const n = Number(item.amount || 0);
+        list.forEach(o => {
+            const n = Number(o.amount || 0);
             if (!isNaN(n)) totalCommit += n;
         });
     }
@@ -268,22 +279,23 @@ async function loadIncomeCommitments() {
 }
 
 /* ----------------------------------------------------------
-   Save manually edited budget
+   Save Used Budget
 ------------------------------------------------------------*/
-window.saveUsedBudget = async function(dateStr, val) {
+window.saveUsedBudget = async function (dateStr, val) {
     const node = ref(db, `${userBase()}/homeBudget/${dateStr}`);
 
-    if (val === "" || val === null) {
+    if (val === "") {
         await remove(node);
     } else {
         const n = Number(val);
         if (!isNaN(n)) await set(node, n);
     }
+
     updateDashboard();
 };
 
 /* ----------------------------------------------------------
-   Quick Input — press Enter
+   Quick Input (press Enter to save today's spending)
 ------------------------------------------------------------*/
 document.getElementById("quickInput").addEventListener("keydown", async e => {
     if (e.key === "Enter") {
@@ -299,48 +311,48 @@ document.getElementById("quickInput").addEventListener("keydown", async e => {
 });
 
 /* ----------------------------------------------------------
-   Summary & Health Bar
+   Summary + Health Bar
 ------------------------------------------------------------*/
-async function updateSummary(base, from, to) {
+async function updateSummary(baseDaily, from, to) {
     const { totalIncome, totalCommit } = await loadIncomeCommitments();
     const net = totalIncome - totalCommit;
 
     const usedSnap = await get(ref(db, `${userBase()}/homeBudget`));
-    let usedTotal = 0;
+    let used = 0;
     if (usedSnap.exists()) {
-        Object.values(usedSnap.val()).forEach(v => usedTotal += Number(v));
+        Object.values(usedSnap.val()).forEach(v => used += Number(v));
     }
 
-    const remaining = net - usedTotal;
+    const remaining = net - used;
 
     document.getElementById("totalIncome").textContent = totalIncome.toFixed(2);
     document.getElementById("totalCommit").textContent = totalCommit.toFixed(2);
     document.getElementById("netIncome").textContent = net.toFixed(2);
     document.getElementById("remainingNet").textContent = remaining.toFixed(2);
-    document.getElementById("dailyBudget").textContent = base.toFixed(2);
+    document.getElementById("dailyBudget").textContent = baseDaily.toFixed(2);
 
     const today = new Date();
     today.setHours(0,0,0,0);
-    const daysLeft = Math.max(0, Math.ceil((to - today)/86400000));
+    const daysLeft = Math.max(0, Math.ceil((to - today) / 86400000));
     document.getElementById("daysLeft").textContent = daysLeft;
 
-    let percent = totalIncome > 0 ? (remaining / totalIncome) * 100 : 0;
-    percent = Math.max(0, Math.min(percent, 100));
+    let pct = totalIncome > 0 ? (remaining / totalIncome) * 100 : 0;
+    pct = Math.max(0, Math.min(pct, 100));
 
     const bar = document.getElementById("healthBarFill");
-    bar.style.width = percent + "%";
+    bar.style.width = pct + "%";
 
-    if (percent <= 20) bar.style.background = "red";
-    else if (percent <= 40) bar.style.background = "orange";
-    else if (percent <= 60) bar.style.background = "gold";
-    else if (percent <= 80) bar.style.background = "#a2e05e";
+    if (pct <= 20) bar.style.background = "red";
+    else if (pct <= 40) bar.style.background = "orange";
+    else if (pct <= 60) bar.style.background = "gold";
+    else if (pct <= 80) bar.style.background = "#a2e05e";
     else bar.style.background = "#2ecc71";
 
-    document.getElementById("healthPercent").textContent = percent.toFixed(1) + "%";
+    document.getElementById("healthPercent").textContent = pct.toFixed(1) + "%";
 }
 
 /* ----------------------------------------------------------
-   Generate Table (with carry-forward)
+   Table Generation (with carry-forward)
 ------------------------------------------------------------*/
 async function generateTable(from, to, baseDaily) {
     const tbody = document.querySelector("#budgetTable tbody");
@@ -360,22 +372,18 @@ async function generateTable(from, to, baseDaily) {
 
     while (current <= to) {
         const ds = formatLocalDate(current);
-        let displayAmount = baseDaily;
 
-        if (ds < todayStr) {
-            displayAmount = 0;  
-        } else if (ds === todayStr) {
-            displayAmount = baseDaily + leftover;
-        }
+        let display = baseDaily;
+        if (ds < todayStr) display = 0;
+        else if (ds === todayStr) display = baseDaily + leftover;
 
         const row = document.createElement("tr");
         row.innerHTML = `
             <td>${ds}</td>
-            <td>${displayAmount.toFixed(2)}</td>
-            <td>
-                <input class="usedBudgetInput" type="number" 
-                    value="${used[ds] ?? ""}" 
-                    oninput="saveUsedBudget('${ds}', this.value)">
+            <td>${display.toFixed(2)}</td>
+            <td><input class="usedBudgetInput" type="number"
+                value="${used[ds] ?? ""}"
+                oninput="saveUsedBudget('${ds}', this.value)">
             </td>
         `;
         tbody.appendChild(row);
@@ -389,7 +397,7 @@ async function generateTable(from, to, baseDaily) {
 }
 
 /* ----------------------------------------------------------
-   Update Dashboard
+   Dashboard Update
 ------------------------------------------------------------*/
 window.updateDashboard = async function () {
     const fromDate = parseInputDate("dateFrom");
@@ -399,7 +407,7 @@ window.updateDashboard = async function () {
     const { totalIncome, totalCommit } = await loadIncomeCommitments();
     const net = totalIncome - totalCommit;
 
-    const totalDays = Math.max(1, Math.ceil((toDate - fromDate) / 86400000) + 1);
+    const totalDays = Math.max(1, Math.ceil((toDate - fromDate)/86400000) + 1);
     const base = net / totalDays;
 
     await updateSummary(base, fromDate, toDate);
@@ -407,18 +415,30 @@ window.updateDashboard = async function () {
 };
 
 /* ----------------------------------------------------------
-   Save Date Range
+   Load Date Range
 ------------------------------------------------------------*/
-window.saveDates = async function() {
+async function loadSavedDates() {
+    const snap = await get(ref(db, `${userBase()}/homeDates`));
+    if (snap.exists()) {
+        const d = snap.val();
+        if (d.from) document.getElementById("dateFrom").value = d.from;
+        if (d.to) document.getElementById("dateTo").value = d.to;
+    }
+}
+
+/* ----------------------------------------------------------
+   Save Dates
+------------------------------------------------------------*/
+window.saveDates = async function () {
     const from = document.getElementById("dateFrom").value;
     const to = document.getElementById("dateTo").value;
     await update(ref(db, `${userBase()}/homeDates`), { from, to });
 };
 
 /* ----------------------------------------------------------
-   Reset
+   Reset Functions
 ------------------------------------------------------------*/
-window.resetHome = async function() {
+window.resetHome = async function () {
     if (!confirm("Reset Home data only?")) return;
     await remove(ref(db, `${userBase()}/homeBudget`));
     await remove(ref(db, `${userBase()}/homeDates`));
@@ -427,7 +447,7 @@ window.resetHome = async function() {
     updateDashboard();
 };
 
-window.resetAll = async function() {
+window.resetAll = async function () {
     if (!confirm("RESET ALL USER DATA?")) return;
     await remove(ref(db, `${userBase()}`));
     alert("All data cleared.");
@@ -435,25 +455,12 @@ window.resetAll = async function() {
 };
 
 /* ----------------------------------------------------------
-   Navigation
+   Navigation Buttons
 ------------------------------------------------------------*/
 document.getElementById("btnInputData").onclick = () => window.location.href = "SalaryInput.html";
 document.getElementById("btnLogout").onclick = () => {
     localStorage.removeItem("loggedUser");
     window.location.href = "login.html";
-};
-
-/* ----------------------------------------------------------
-   Page Load
-------------------------------------------------------------*/
-window.onload = async () => {
-    const snap = await get(ref(db, `${userBase()}/homeDates`));
-    if (snap.exists()) {
-        const d = snap.val();
-        if (d.from) document.getElementById("dateFrom").value = d.from;
-        if (d.to) document.getElementById("dateTo").value = d.to;
-    }
-    updateDashboard();
 };
 
 </script>
