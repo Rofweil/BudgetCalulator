@@ -206,24 +206,20 @@ const db = getDatabase(app);
 ------------------------------------------------------------*/
 // LOGIN CHECK (runs AFTER browser loads everything)
 window.addEventListener("DOMContentLoaded", () => {
-    const USER = localStorage.getItem("loggedUser");
+  /* ----------------------------------------------------------
+   LOGIN CHECK — must run BEFORE anything else
+------------------------------------------------------------*/
+const CURRENT_USER = localStorage.getItem("loggedUser");
 
-    // Defensive: empty, null, undefined, "null", "undefined", spaces
-    if (!USER || USER.trim() === "" || USER === "null" || USER === "undefined") {
-        localStorage.removeItem("loggedUser");
-        alert("You must login first!");
-        window.location.href = "login.html";
-        return;
-    }
+if (!CURRENT_USER || CURRENT_USER.trim() === "" || CURRENT_USER === "null" || CURRENT_USER === "undefined") {
+    localStorage.removeItem("loggedUser");
+    alert("You must login first!");
+    window.location.href = "login.html";
+    throw new Error("User not logged in — stopping script");
+}
 
-    // Set global variable for rest of the script
-    window.CURRENT_USER = USER;
-    document.getElementById("welcomeUser").textContent = USER;
-});
-
-
-document.getElementById("welcomeUser").textContent = USER;
-const userBase() = () => `users/${window.CURRENT_USER}`;
+document.getElementById("welcomeUser").textContent = CURRENT_USER;
+const userBase = () => `users/${CURRENT_USER}`;
 
 /* ----------------------------------------------------------
    4. Helper functions
@@ -501,4 +497,5 @@ window.onload = async () => {
 
 </body>
 </html>
+
 
