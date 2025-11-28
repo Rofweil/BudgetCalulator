@@ -1,154 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Budget Saver — Debug Version</title>
-
+<meta charset="utf-8" />
+<title>Salary Input</title>
 <style>
-    body { font-family: Arial, sans-serif; margin: 0; background: #e8f5e9; padding: 20px; }
-    .container { max-width: 360px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.15); }
-    h2 { text-align: center; color: #2e7d32; margin-bottom: 10px; }
-    label { font-weight: bold; margin-top: 12px; display: block; color: #1b5e20; }
-    input { width: 75%; padding: 8px; margin-top: 5px; border: 1px solid #81c784; border-radius: 8px; background: #f1f8f6; font-size: 15px; }
-    .buttons { margin-top: 20px; display: flex; justify-content: space-between; }
-    button { width: 32%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; }
-    .home { background: #9e9e9e; } .save { background: #388e3c; } .next { background: #43a047; }
-    .status { margin-top: 12px; font-size: 14px; color: #444; }
+  body{font-family:Arial;background:#e8f5e9;margin:0;padding:20px;display:flex;justify-content:center;align-items:center;height:100vh}
+  .box{background:#fff;padding:20px;border-radius:12px;width:360px;box-shadow:0 6px 18px rgba(0,0,0,.12)}
+  label{font-weight:700;color:#1b5e20}
+  input{width:75%;padding:8px;margin-top:6px;border:1px solid #81c784;border-radius:8px;background:#f1f8f6}
+  .buttons{margin-top:20px;display:flex;justify-content:space-between}
+  button{width:32%;padding:10px;color:#fff;border:0;border-radius:8px;cursor:pointer}
+  .home{background:#9e9e9e}.save{background:#388e3c}.next{background:#43a047}
 </style>
 </head>
-
 <body>
-<div class="container">
-    <h2>Budget Saver — Debug</h2>
+<div class="box">
+  <h2>Budget Saver</h2>
+  <label>Main Salary</label><br>
+  <input type="number" id="salary" placeholder="Enter salary"><br>
+  <label>Part-Time Salary</label><br>
+  <input type="number" id="partTime" placeholder="Enter part-time salary"><br>
 
-    <label>Main Salary</label>
-    <input type="number" id="salary" placeholder="Enter salary">
-
-    <label>Part-Time Salary</label>
-    <input type="number" id="partTime" placeholder="Enter part-time salary">
-
-    <div class="buttons">
-        <button class="home" onclick="goHome()">Home</button>
-        <button class="save" onclick="saveData()">Save</button>
-        <button class="next" onclick="goNext()">Next</button>
-    </div>
-
-    <div class="status" id="status">Status: idle</div>
+  <div class="buttons">
+    <button class="home" id="btnHome">Home</button>
+    <button class="save" id="btnSave">Save</button>
+    <button class="next" id="btnNext">Next</button>
+  </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-// --- Firebase config (make sure databaseURL is correct) ---
 const firebaseConfig = {
-    apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
-    authDomain: "budgetcalculator-22ef5.firebaseapp.com",
-    projectId: "budgetcalculator-22ef5",
-    storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
-    messagingSenderId: "574952478496",
-    appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
-    measurementId: "G-2LL0GD2K30",
-    // IMPORTANT: exact Realtime DB URL
-    databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app"
+  apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
+  authDomain: "budgetcalculator-22ef5.firebaseapp.com",
+  projectId: "budgetcalculator-22ef5",
+  storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
+  messagingSenderId: "574952478496",
+  appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
+  measurementId: "G-2LL0GD2K30",
+  databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
 
-// Initialize
 const app = initializeApp(firebaseConfig);
-// Use explicit databaseURL to avoid ambiguity
-const db = getDatabase(app, firebaseConfig.databaseURL);
+const db = getDatabase(app);
 
-function setStatus(msg) {
-    document.getElementById("status").innerText = "Status: " + msg;
-    console.log("[STATUS]", msg);
+const USER = localStorage.getItem("loggedInUser");
+if(!USER){ alert("You must login first"); window.location.href = "login.html"; throw new Error("Not logged in"); }
+const userBase = `users/${USER}`;
+
+async function load(){
+  try{
+    const salarySnap = await get(ref(db, `${userBase}/salary`));
+    const partSnap = await get(ref(db, `${userBase}/partTime`));
+    if(salarySnap.exists()) document.getElementById("salary").value = salarySnap.val();
+    if(partSnap.exists()) document.getElementById("partTime").value = partSnap.val();
+  }catch(e){ console.error(e); }
 }
 
-// Load saved values on page load
-window.addEventListener("DOMContentLoaded", async () => {
-    setStatus("loading saved values...");
-    console.log("Loading existing salary/partTime from DB...");
-
-    try {
-        const salarySnap = await get(ref(db, "salary"));
-        const partSnap = await get(ref(db, "partTime"));
-
-        if (salarySnap.exists()) {
-            document.getElementById("salary").value = salarySnap.val();
-            console.log("Loaded salary:", salarySnap.val());
-        } else {
-            console.log("No salary node found.");
-        }
-
-        if (partSnap.exists()) {
-            document.getElementById("partTime").value = partSnap.val();
-            console.log("Loaded partTime:", partSnap.val());
-        } else {
-            console.log("No partTime node found.");
-        }
-
-        setStatus("loaded values");
-    } catch (err) {
-        console.error("Error loading data:", err);
-        setStatus("error loading — see console");
-        alert("Error loading saved data. See console for details.");
-    }
+document.getElementById("btnSave").addEventListener("click", async ()=>{
+  try{
+    const s = document.getElementById("salary").value || null;
+    const p = document.getElementById("partTime").value || null;
+    await set(ref(db, `${userBase}/salary`), s === "" ? null : Number(s));
+    await set(ref(db, `${userBase}/partTime`), p === "" ? null : Number(p));
+    alert("Saved!");
+  }catch(e){ console.error(e); alert("Save failed"); }
 });
 
-// Expose global functions so onclick handlers work with module script
-window.saveData = async function () {
-    setStatus("saving...");
-    console.log("Attempting to save salary & partTime...");
+document.getElementById("btnHome").addEventListener("click", ()=> window.location.href = "Home.html");
+document.getElementById("btnNext").addEventListener("click", ()=> window.location.href = "Commitment.html");
 
-    const salaryEl = document.getElementById("salary");
-    const partEl = document.getElementById("partTime");
-
-    const salaryRaw = salaryEl.value;
-    const partRaw = partEl.value;
-
-    // Do not blindly convert empty -> NaN. Validate first.
-    const salaryNum = salaryRaw === "" ? null : Number(salaryRaw);
-    const partNum = partRaw === "" ? null : Number(partRaw);
-
-    if (salaryRaw !== "" && Number.isNaN(salaryNum)) {
-        alert("Main Salary is not a valid number.");
-        setStatus("invalid main salary");
-        return;
-    }
-    if (partRaw !== "" && Number.isNaN(partNum)) {
-        alert("Part-time Salary is not a valid number.");
-        setStatus("invalid part-time");
-        return;
-    }
-
-    try {
-        // Write values. If field is empty we remove the node by writing null (you can change this)
-        console.log("Writing to DB:", { salary: salaryNum, partTime: partNum });
-
-        await set(ref(db, "salary"), salaryNum === null ? null : salaryNum);
-        await set(ref(db, "partTime"), partNum === null ? null : partNum);
-
-        // Read back to confirm
-        const salaryCheck = await get(ref(db, "salary"));
-        const partCheck = await get(ref(db, "partTime"));
-
-        console.log("Read back after write:", { salary: salaryCheck.exists() ? salaryCheck.val() : null, partTime: partCheck.exists() ? partCheck.val() : null });
-
-        setStatus("saved successfully");
-        alert("Saved successfully. Read-back values:\n salary = " + (salaryCheck.exists() ? salaryCheck.val() : "null") + "\n partTime = " + (partCheck.exists() ? partCheck.val() : "null"));
-    } catch (err) {
-        console.error("Error during save:", err);
-        setStatus("save failed — see console");
-        alert("Save failed. See console for error details.");
-    }
-};
-
-window.goNext = function () {
-    window.location.href = "Commitment.html";
-};
-
-window.goHome = function () {
-    window.location.href = "Home.html";
-};
+load();
 </script>
 </body>
 </html>
