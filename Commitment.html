@@ -82,7 +82,14 @@ async function loadData(){
     const snap = await get(ref(db, `users/${USER}/commitments`));
     if(!snap.exists()) return;
     const data = snap.val();
-    commitKeys.forEach(k=> { if(data[k]!==undefined) document.getElementById(k).value = data[k]; });
+    commitKeys.forEach(k=> {
+  if (data[k] !== undefined && data[k] !== null && data[k] !== "") {
+    // normalize value to show up to 2 decimals if needed
+    const num = parseFloat(data[k]);
+    document.getElementById(k).value = Number.isNaN(num) ? "" : num;
+  }
+});
+
     if(data.other){
       const others = Array.isArray(data.other) ? data.other : Object.values(data.other);
       others.forEach(o=>{
@@ -97,9 +104,9 @@ function addExtraField(title="", amount=""){
   const container = document.getElementById("extraFields");
   const div = document.createElement("div");
   div.style.marginTop = "8px";
-  div.innerHTML = `
+    div.innerHTML = `
     <input type="text" class="otherTitle" placeholder="Title" value="${title}" style="width:48%;padding:8px;border-radius:6px;border:1px solid #cfe8d5;margin-right:4%">
-    <input type="number" class="otherAmount" placeholder="Amount" value="${amount}" style="width:48%;padding:8px;border-radius:6px;border:1px solid #cfe8d5">
+    <input type="number" step="0.01" class="otherAmount" placeholder="Amount" value="${amount}" style="width:48%;padding:8px;border-radius:6px;border:1px solid #cfe8d5">
   `;
   container.appendChild(div);
   div.querySelector(".otherAmount").addEventListener("input", recalcTotal);
@@ -108,15 +115,31 @@ function addExtraField(title="", amount=""){
 document.getElementById("addOther").addEventListener("click", ()=> addExtraField());
 
 function recalcTotal(){
-  let total = 0;
-  commitKeys.forEach(k=> total += Number(document.getElementById(k).value || 0));
-  document.querySelectorAll(".otherAmount").forEach(n => total += Number(n.value || 0));
-  document.getElementById("totalCommit").innerText = "Total: RM" + total;
+  // accumulate in cents to avoid floating point precision issues
+  let totalCents = 0;
+
+  commitKeys.forEach(k=>{
+    const v = parseFloat(document.getElementById(k).value);
+    if (!Number.isNaN(v)) totalCents += Math.round(v * 100);
+  });
+
+  document.querySelectorAll(".otherAmount").forEach(n => {
+    const v = parseFloat(n.value);
+    if (!Number.isNaN(v)) totalCents += Math.round(v * 100);
+  });
+
+  const total = (totalCents / 100);
+  // show with 2 decimals
+  document.getElementById("totalCommit").innerText = "Total: RM" + total.toFixed(2);
 }
+
 
 document.getElementById("btnSave").onclick = async ()=>{
   const data = {};
-  commitKeys.forEach(k=> data[k] = document.getElementById(k).value || "");
+  commitKeys.forEach(k=>{
+  const v = document.getElementById(k).value;
+  data[k] = (v === "" || v === null) ? "" : Number(parseFloat(v.toString()));
+});
   const others = [];
   document.querySelectorAll(".otherTitle").forEach((t,i)=>{
     const amt = document.querySelectorAll(".otherAmount")[i].value;
@@ -136,5 +159,6 @@ loadData();
 </script>
 </body>
 </html>
+
 
 
