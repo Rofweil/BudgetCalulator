@@ -1,241 +1,188 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8">
 <title>Home - Budget Dashboard</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
-  :root{
-    --green:#2e8d47;
-    --muted:#dff4e3;
-    --card:#ffffff;
-    --accent:#a2e05e;
-  }
-  body{
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    margin:0;
-    background:#f2faf3;
-    padding:16px;
-    color:#123;
-  }
+    body {
+        font-family: Arial, sans-serif;
+        background: #f2faf3;
+        margin: 0;
+        padding: 15px;
+    }
 
-  .wrap{
-    max-width:1100px;
-    margin:0 auto;
-  }
+    .container {
+        max-width: 1000px;
+        margin: auto;
+        background: white;
+        padding: 18px;
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
 
-  .topline{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
-    margin-bottom:12px;
-  }
+    h2 {
+        text-align: center;
+        color: #2c7a3f;
+        margin-bottom: 15px;
+        font-size: 24px;
+    }
 
-  .userInfo{
-    text-align:right;
-    color:var(--green);
-    font-weight:600;
-  }
+    .top-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: space-between;
+        margin-bottom: 15px;
+    }
 
-  .container{
-    background:var(--card);
-    border-radius:12px;
-    padding:18px;
-    box-shadow:0 6px 20px rgba(8,60,20,0.06);
-  }
+    button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        color: white;
+    }
 
-  h1{ text-align:center; color:var(--green); margin:0 0 14px; font-size:20px; }
+    .resetHome { background: #f6a03f; }
+    .resetAll  { background: #e44545; }
+    .inputData { background: #2e8d47; }
+    .logoutBtn { background: #444; }
+    .saveBtn   { background: #2c7a3f; margin-top: 8px; width: 100%; }
 
-  .actions{
-    display:flex;
-    gap:10px;
-    justify-content:flex-end;
-    flex-wrap:wrap;
-    margin-bottom:14px;
-  }
+    label {
+        font-weight: bold;
+        display: block;
+        color: #2b7a38;
+        margin-top: 10px;
+    }
 
-  .btn{
-    border:0;
-    color:#fff;
-    padding:10px 14px;
-    border-radius:10px;
-    font-weight:700;
-    cursor:pointer;
-    min-width:92px;
-    box-shadow:0 2px 6px rgba(0,0,0,0.06);
-  }
-  .btn:active{ transform:translateY(1px); }
-  .btn.reset{ background:#f6a03f; }
-  .btn.resetAll{ background:#e44545; }
-  .btn.input{ background:var(--green); }
-  .btn.logout{ background:#444; }
+    input[type="date"], input[type="number"] {
+        width: 100%;
+        padding: 9px;
+        margin-top: 5px;
+        border-radius: 8px;
+        border: 1px solid #8dcc90;
+        font-size: 15px;
+    }
 
-  /* Quick input row */
-  #quickRow{
-    display:flex;
-    gap:8px;
-    align-items:center;
-    margin-bottom:14px;
-    flex-wrap:wrap;
-  }
-  #quickRow label{ font-weight:700; color:#2b7a38; margin-right:6px; }
-  #quickInput{
-    padding:10px;
-    border-radius:8px;
-    border:1px solid #cfe9d6;
-    font-size:16px;
-    min-width:160px;
-  }
-  #quickSave{
-    padding:10px 14px;
-    border-radius:8px;
-    border:0;
-    background:var(--green);
-    color:white;
-    font-weight:700;
-    cursor:pointer;
-  }
+    .summary {
+        background: #dff4e3;
+        padding: 14px;
+        border-radius: 12px;
+        margin-top: 20px;
+        font-size: 15px;
+    }
 
-  /* summary */
-  .summary{
-    background:var(--muted);
-    border-radius:10px;
-    padding:12px;
-    margin-bottom:12px;
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:10px;
-    align-items:center;
-  }
-  .summary .item{ font-size:14px; }
-  .summary .value{ font-weight:800; color:#146b2a; margin-left:8px; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+        font-size: 15px;
+    }
 
-  .health-wrap{
-    grid-column: 1 / -1;
-    margin-top:6px;
-  }
-  .healthBar{
-    width:100%;
-    height:20px;
-    background:#e4f3e8;
-    border-radius:10px;
-    overflow:hidden;
-  }
-  .healthFill{
-    height:100%;
-    width:0%;
-    background:linear-gradient(90deg,#ff4b4b,#ffa500,#ffea00,#2ecc71);
-    transition:width .45s ease;
-  }
-  .healthText{ text-align:right; font-weight:700; margin-top:6px; color:#146b2a; }
+    th, td {
+        border: 1px solid #b5dfbb;
+        padding: 8px;
+        text-align: center;
+    }
 
-  /* table */
-  .tableWrap{
-    overflow:auto;
-    margin-top:10px;
-  }
-  table{
-    width:100%;
-    border-collapse:collapse;
-    min-width:720px;
-    background:var(--card);
-  }
-  th,td{
-    border:1px solid #d8edd9;
-    padding:10px;
-    text-align:center;
-    font-size:14px;
-  }
-  th{ background:#bfe6c7; font-weight:800; }
-  .usedInput{ width:90px; padding:6px; border-radius:6px; border:1px solid #cfe9d6; }
+    th { background: #bfe6c7; }
 
-  /* responsive adjustments - hybrid: desktop stays similar, mobile optimized */
-  @media (max-width:700px){
-    .summary{ grid-template-columns:repeat(2,1fr); font-size:13px; }
-    .actions{ justify-content:center; }
-    .topline{ flex-direction:column; align-items:flex-start; gap:8px; }
-    .userInfo{ text-align:left; }
-    #quickRow{ gap:6px; }
-    table{ min-width:640px; } /* allow horizontal scroll but reduce min width  */
-    .btn{ min-width:74px; padding:10px 10px; font-size:14px; border-radius:9px; }
-  }
+    .usedBudgetInput {
+        width: 80px;
+    }
+
+    @media (max-width: 500px) {
+        table {
+            font-size: 12px;
+        }
+        th, td {
+            padding: 5px;
+        }
+        .usedBudgetInput {
+            width: 60px;
+        }
+    }
 </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="topline">
-      <div></div>
-      <div class="userInfo">Logged in as: <strong id="welcomeUser">—</strong></div>
-    </div>
 
-    <div class="container" role="main" aria-labelledby="title">
-      <h1 id="title">Budget Dashboard</h1>
+<p style="text-align:right; color:#2c7a3f; font-weight:bold;">
+    Logged in as: <span id="welcomeUser"></span>
+</p>
 
-      <div class="actions" aria-hidden="false">
-        <button id="btnResetHome" class="btn reset">Reset</button>
-        <button id="btnResetAll" class="btn resetAll">Reset All</button>
-        <button id="btnInputData" class="btn input">Input Data</button>
-        <button id="btnLogout" class="btn logout">Logout</button>
-      </div>
+<!-- LOGIN CHECK -->
+<script>
+(function() {
+    const user = localStorage.getItem("loggedInUser");
 
-      <!-- Dates -->
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
-        <label style="font-weight:800;color:#2b7a38;">From:</label>
-        <input id="dateFrom" type="date" />
-        <label style="font-weight:800;color:#2b7a38;margin-left:8px;">To:</label>
-        <input id="dateTo" type="date" />
-      </div>
+    if (!user || user.trim() === "" || user === "null" || user === "undefined") {
+        localStorage.removeItem("loggedInUser");
+        alert("You must login first!");
+        window.location.href = "login.html";
+        return;
+    }
 
-      <!-- Quick Input -->
-      <div id="quickRow">
-        <label for="quickInput">Today's Spending</label>
-        <input id="quickInput" type="number" inputmode="numeric" placeholder="0.00" />
-        <button id="quickSave" aria-label="Save today's spending">Save</button>
-      </div>
+    window.CURRENT_USER = user;
+    document.getElementById("welcomeUser").textContent = user;
+})();
+</script>
 
-      <!-- Summary + Health -->
-      <div class="summary" aria-live="polite">
-        <div class="item">Total Income: <span class="value">RM <span id="totalIncome">0.00</span></span></div>
-        <div class="item">Total Commitments: <span class="value">RM <span id="totalCommit">0.00</span></span></div>
-        <div class="item">Net Income: <span class="value">RM <span id="netIncome">0.00</span></span></div>
+<div class="container">
 
-        <div class="item">Days Left: <span class="value"><span id="daysLeft">0</span></span></div>
-        <div class="item">Daily Budget: <span class="value">RM <span id="dailyBudget">0.00</span></span></div>
-        <div class="item">Remaining Net: <span class="value">RM <span id="remainingNet">0.00</span></span></div>
+<h2>Budget Dashboard</h2>
 
-        <div class="health-wrap">
-          <div class="healthBar" role="progressbar" aria-valuemin="0" aria-valuemax="100">
-            <div id="healthFill" class="healthFill"></div>
-          </div>
-          <div class="healthText" id="healthPercent">0%</div>
-        </div>
-      </div>
+<div class="top-buttons">
+    <button class="resetHome" id="btnResetHome">Reset Home</button>
+    <button class="resetAll" id="btnResetAll">Reset All</button>
+    <button class="inputData" id="btnInputData">Input Data</button>
+    <button class="logoutBtn" id="btnLogout">Logout</button>
+</div>
 
-      <!-- Table -->
-      <div class="tableWrap">
-        <table id="budgetTable" aria-describedby="title">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Daily Budget</th>
-              <th>Budget Used</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+<label>From:</label>
+<input type="date" id="dateFrom" onchange="saveDates(); updateDashboard()">
 
-  <!-- Firebase + logic -->
-  <script type="module">
-  // Firebase SDK
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-  import { getDatabase, ref, get, set, update, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+<label>To:</label>
+<input type="date" id="dateTo" onchange="saveDates(); updateDashboard()">
 
-  // Config — keep your project's values (databaseURL included)
-  const firebaseConfig = {
+<label>Today's Spending:</label>
+<input type="number" id="quickInput" placeholder="Enter amount">
+
+<button class="saveBtn" id="saveToday">SAVE TODAY'S SPENDING</button>
+
+<div class="summary">
+    <p>Total Income: RM <span id="totalIncome">0</span></p>
+    <p>Total Commitments: RM <span id="totalCommit">0</span></p>
+    <p>Net Income: RM <span id="netIncome">0</span></p>
+    <p>Remaining Net: RM <span id="remainingNet">0</span></p>
+    <p>Days Left: <span id="daysLeft">0</span></p>
+    <p>Daily Budget: RM <span id="dailyBudget">0</span></p>
+</div>
+
+<table id="budgetTable">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Daily Budget</th>
+            <th>Budget Used</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+</div>
+
+<script type="module">
+/* ===== Firebase ===== */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getDatabase, ref, get, set, update, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
+
+const firebaseConfig = {
     apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
     authDomain: "budgetcalculator-22ef5.firebaseapp.com",
     projectId: "budgetcalculator-22ef5",
@@ -243,275 +190,192 @@
     messagingSenderId: "574952478496",
     appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
     databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
-  };
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-  // ------------ Login check (robust) ------------
-  // The non-module login check earlier set window.CURRENT_USER or localStorage.loggedUser.
-  // Here we also read from localStorage (safe).
-  const CURRENT_USER = (localStorage.getItem("loggedUser") || "").trim();
+const userBase = () => `users/${window.CURRENT_USER}`;
 
-  if (!CURRENT_USER || CURRENT_USER === "null" || CURRENT_USER === "undefined") {
-    // Not logged in -> redirect
-    localStorage.removeItem("loggedUser");
-    alert("You must login first!");
-    window.location.href = "login.html";
-    throw new Error("Not logged in");
-  }
+/* ===== Helpers ===== */
+function formatLocalDate(d){
+    const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),da=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${da}`;
+}
 
-  // show user in UI
-  document.getElementById("welcomeUser").textContent = CURRENT_USER;
-
-  // user path helper
-  const userBase = () => `users/${CURRENT_USER}`;
-
-  // ---------- date helpers (local-time safe) ----------
-  function formatLocalDate(d){
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,"0");
-    const day = String(d.getDate()).padStart(2,"0");
-    return `${y}-${m}-${day}`;
-  }
-  function parseInputDate(id){
-    const v = document.getElementById(id).value;
-    if(!v) return null;
-    const [y,m,d] = v.split("-");
-    return new Date(Number(y), Number(m)-1, Number(d));
-  }
-
-  // ---------- load income + commitments (from per-user nodes) ----------
-  async function loadIncomeCommitments(){
-    // try read salary & partTime under the user node; fallback to root if needed
-    const salarySnap = await get(ref(db, `${userBase()}/salary`));
-    const partSnap = await get(ref(db, `${userBase()}/partTime`));
-    const commitSnap = await get(ref(db, `${userBase()}/commitments`));
-
-    const salary = Number(salarySnap.exists() ? salarySnap.val() : 0);
-    const partTime = Number(partSnap.exists() ? partSnap.val() : 0);
-    const commitments = commitSnap.exists() ? commitSnap.val() : {};
+/* ===== Load Income & Commitments ===== */
+async function loadIncomeCommitments() {
+    const sal = await get(ref(db, `${userBase()}/salary`));
+    const pt = await get(ref(db, `${userBase()}/partTime`));
+    const com = await get(ref(db, `${userBase()}/commitments`));
 
     let totalCommit = 0;
-    const keys = ["rent","motorcycle","telco","electric","water","shopee"];
-    for(const k of keys){
-      const n = Number(commitments[k] || 0);
-      if(!isNaN(n)) totalCommit += n;
+    const d = com.val() || {};
+
+    ["rent","motorcycle","telco","electric","water","shopee"].forEach(k=>{
+        totalCommit += Number(d[k]||0);
+    });
+
+    if (d.other){
+        const list = Array.isArray(d.other) ? d.other : Object.values(d.other);
+        list.forEach(o=> totalCommit += Number(o.amount||0));
     }
 
-    // other: array or object
-    if(commitments.other){
-      const list = Array.isArray(commitments.other) ? commitments.other : Object.values(commitments.other);
-      for(const it of list){
-        const n = Number(it?.amount || it || 0);
-        if(!isNaN(n)) totalCommit += n;
-      }
-    }
+    return {
+        totalIncome: Number(sal.val()||0) + Number(pt.val()||0),
+        totalCommit
+    };
+}
 
-    return { totalIncome: salary + partTime, totalCommit, salary, partTime };
-  }
+/* ===== Save edited cell ===== */
+window.saveUsedBudget = async (dateStr,val)=>{
+    const node = ref(db,`${userBase()}/homeBudget/${dateStr}`);
+    if(val==="" || val===null) await remove(node);
+    else await set(node, Number(val));
 
-  // ---------- save single used budget entry ----------
-  window.saveUsedBudget = async function(dateStr, value){
-    const node = ref(db, `${userBase()}/homeBudget/${dateStr}`);
-    if(value === "" || value === null || value === undefined){
-      await remove(node);
-    } else {
-      const num = Number(value);
-      if(Number.isNaN(num)) return;
-      await set(node, num);
-    }
-    await updateDashboard(); // refresh UI
-  };
+    updateDashboard();
+};
 
-  // ---------- quick input handlers ----------
-  async function saveQuickInput(){
-    const inp = document.getElementById("quickInput");
-    const val = inp.value.trim();
-    if(val === "") return;
-    const num = Number(val);
-    if(isNaN(num) || num < 0) return;
+/* ===== Save Today's Spending Button ===== */
+document.getElementById("saveToday").onclick = async () => {
+    const val = Number(document.getElementById("quickInput").value);
+    if (isNaN(val)) return;
+
     const today = formatLocalDate(new Date());
-    await set(ref(db, `${userBase()}/homeBudget/${today}`), num);
-    inp.value = "";
-    await updateDashboard();
-  }
+    await set(ref(db, `${userBase()}/homeBudget/${today}`), val);
 
-  document.getElementById("quickSave").addEventListener("click", saveQuickInput);
-  // enter key (desktop keyboards, some mobiles)
-  document.getElementById("quickInput").addEventListener("keydown", (e) => {
-    if(e.key === "Enter") saveQuickInput();
-  });
+    document.getElementById("quickInput").value = "";
+    updateDashboard();
+};
 
-  // ---------- compute & render summary including health bar ----------
-  async function updateSummary(baseDaily, from, to){
-    const { totalIncome, totalCommit } = await loadIncomeCommitments();
+/* ===== Update Summary ===== */
+async function updateSummary(base, fromDate, toDate){
+    const {totalIncome,totalCommit} = await loadIncomeCommitments();
     const net = totalIncome - totalCommit;
 
-    const usedSnap = await get(ref(db, `${userBase()}/homeBudget`));
-    let usedTotal = 0;
-    if(usedSnap.exists()){
-      Object.values(usedSnap.val()).forEach(v => usedTotal += Number(v || 0));
-    }
+    const usedSnap = await get(ref(db,`${userBase()}/homeBudget`));
+    let used = 0;
+    if(usedSnap.exists()) Object.values(usedSnap.val()).forEach(v=> used+=Number(v));
 
-    const remaining = net - usedTotal;
+    const remaining = net - used;
 
     document.getElementById("totalIncome").textContent = totalIncome.toFixed(2);
     document.getElementById("totalCommit").textContent = totalCommit.toFixed(2);
     document.getElementById("netIncome").textContent = net.toFixed(2);
     document.getElementById("remainingNet").textContent = remaining.toFixed(2);
-    document.getElementById("dailyBudget").textContent = baseDaily.toFixed(2);
+    document.getElementById("dailyBudget").textContent = base.toFixed(2);
 
-    // days left uses 'to' date
     const today = new Date();
     today.setHours(0,0,0,0);
-    const daysLeft = Math.max(0, Math.ceil((to - today)/86400000));
+    const daysLeft = Math.max(0, Math.ceil((toDate - today)/86400000));
     document.getElementById("daysLeft").textContent = daysLeft;
+}
 
-    // health percent (remaining / totalIncome)
-    let pct = totalIncome > 0 ? (remaining / totalIncome) * 100 : 0;
-    pct = Math.max(0, Math.min(100, pct));
-
-    document.getElementById("healthFill").style.width = pct + "%";
-    document.getElementById("healthPercent").textContent = pct.toFixed(1) + "%";
-  }
-
-  // ---------- generate table with carry-forward logic ----------
-  async function generateTable(from, to, baseDaily){
+/* ===== Table ===== */
+async function generateTable(from,to,baseDaily){
     const tbody = document.querySelector("#budgetTable tbody");
-    tbody.innerHTML = "";
+    tbody.innerHTML="";
 
-    const usedSnap = await get(ref(db, `${userBase()}/homeBudget`));
-    const used = usedSnap.exists() ? usedSnap.val() : {};
+    const snap = await get(ref(db,`${userBase()}/homeBudget`));
+    const used = snap.exists()?snap.val():{};
 
+    let current = new Date(from);
     const today = new Date(); today.setHours(0,0,0,0);
     const todayStr = formatLocalDate(today);
 
-    // accumulate leftover from earlier days
-    let current = new Date(from); current.setHours(0,0,0,0);
     let leftover = 0;
 
-    // First pass: compute leftover up to yesterday
-    while(current <= to){
-      const ds = formatLocalDate(current);
-      if(ds < todayStr){
-        const spent = Number(used[ds] || 0);
-        leftover += baseDaily - spent;
-      }
-      current.setDate(current.getDate() + 1);
+    while(current<=to){
+        const ds = formatLocalDate(current);
+
+        let show = baseDaily;
+        if(ds<todayStr) show = 0;
+        else if(ds===todayStr) show = baseDaily + leftover;
+
+        const row=document.createElement("tr");
+        row.innerHTML=`
+            <td>${ds}</td>
+            <td>${show.toFixed(2)}</td>
+            <td><input class="usedBudgetInput" type="number"
+                value="${used[ds]??""}"
+                oninput="saveUsedBudget('${ds}',this.value)">
+            </td>
+        `;
+        tbody.appendChild(row);
+
+        if(ds<todayStr){
+            leftover += baseDaily - Number(used[ds]||0);
+        }
+
+        current.setDate(current.getDate()+1);
     }
+}
 
-    // Second pass: actually render rows
-    current = new Date(from); current.setHours(0,0,0,0);
-    while(current <= to){
-      const ds = formatLocalDate(current);
-      let showBudget = baseDaily;
-      if(ds < todayStr) showBudget = 0;
-      else if(ds === todayStr) showBudget = baseDaily + leftover;
+/* ===== Dashboard ===== */
+window.updateDashboard = async ()=>{
+    const f = document.getElementById("dateFrom").value;
+    const t = document.getElementById("dateTo").value;
+    if(!f || !t) return;
 
-      const tr = document.createElement("tr");
-      // create safe value for input attribute
-      const val = used[ds] !== undefined ? used[ds] : "";
-      tr.innerHTML = `
-        <td>${ds}</td>
-        <td>${showBudget.toFixed(2)}</td>
-        <td>
-          <input class="usedInput" type="number" inputmode="numeric" value="${val}" 
-            aria-label="Spending for ${ds}" />
-        </td>
-      `;
-      // attach input listener (manual edits update firebase)
-      const inputEl = tr.querySelector("input");
-      inputEl.addEventListener("change", (ev) => {
-        // use change event to avoid saving on every keypress; user can edit then tap away
-        const v = ev.target.value;
-        saveUsedBudget(ds, v);
-      });
+    const fromDate = new Date(f);
+    const toDate = new Date(t);
 
-      tbody.appendChild(tr);
-      current.setDate(current.getDate() + 1);
-    }
-  }
+    const {totalIncome,totalCommit} = await loadIncomeCommitments();
+    const net = totalIncome-totalCommit;
 
-  // ---------- main update function ----------
-  window.updateDashboard = async function(){
-    const from = parseInputDate("dateFrom");
-    const to = parseInputDate("dateTo");
-    if(!from || !to) return;
-
-    // ensure 'from' is start-of-day and 'to' is end-of-day logical (we only use date parts)
-    from.setHours(0,0,0,0);
-    to.setHours(0,0,0,0);
-
-    const { totalIncome, totalCommit } = await loadIncomeCommitments();
-    const net = totalIncome - totalCommit;
-
-    const totalDays = Math.max(1, Math.ceil((to - from)/86400000) + 1);
+    const totalDays = Math.max(1, Math.ceil((toDate-fromDate)/86400000)+1);
     const base = net / totalDays;
 
-    await updateSummary(base, from, to);
-    await generateTable(from, to, base);
-  };
+    updateSummary(base,fromDate,toDate);
+    generateTable(fromDate,toDate,base);
+};
 
-  // ---------- save date range ----------
-  window.saveDates = async function(){
-    const from = document.getElementById("dateFrom").value || "";
-    const to = document.getElementById("dateTo").value || "";
-    await update(ref(db, `${userBase()}/homeDates`), { from, to });
-    // refresh
-    await updateDashboard();
-  };
-
-  // ---------- reset functions ----------
-  document.getElementById("btnResetHome").addEventListener("click", async () => {
-    if(!confirm("Reset only Home budget data and dates?")) return;
-    await remove(ref(db, `${userBase()}/homeBudget`));
-    await remove(ref(db, `${userBase()}/homeDates`));
-    document.getElementById("dateFrom").value = "";
-    document.getElementById("dateTo").value = "";
-    await updateDashboard();
-  });
-
-  document.getElementById("btnResetAll").addEventListener("click", async () => {
-    if(!confirm("Reset ALL data for this user? (salary, commitments, home)")) return;
-    await remove(ref(db, `${userBase()}`));
-    alert("All user data removed.");
-    location.reload();
-  });
-
-  // ---------- navigation ----------
-  document.getElementById("btnInputData").addEventListener("click", () => {
-    window.location.href = "SalaryInput.html";
-  });
-  document.getElementById("btnLogout").addEventListener("click", () => {
-    localStorage.removeItem("loggedUser");
-    window.location.href = "login.html";
-  });
-
-  // ---------- load saved dates + initial run ----------
-  (async function init(){
-    try{
-      const snap = await get(ref(db, `${userBase()}/homeDates`));
-      if(snap.exists()){
-        const d = snap.val();
-        if(d.from) document.getElementById("dateFrom").value = d.from;
-        if(d.to) document.getElementById("dateTo").value = d.to;
-      }
-      // if no dates set, set defaults: today → end of month (or +30 days)
-      if(!document.getElementById("dateFrom").value || !document.getElementById("dateTo").value){
-        const today = new Date();
-        const defaultFrom = formatLocalDate(today);
-        const next = new Date(today.getTime() + (30 * 86400000));
-        const defaultTo = formatLocalDate(next);
-        if(!document.getElementById("dateFrom").value) document.getElementById("dateFrom").value = defaultFrom;
-        if(!document.getElementById("dateTo").value) document.getElementById("dateTo").value = defaultTo;
-      }
-      await updateDashboard();
-    }catch(err){
-      console.error("Init error:", err);
+/* ===== Load Saved Dates ===== */
+async function loadSavedDates(){
+    const snap = await get(ref(db,`${userBase()}/homeDates`));
+    if(snap.exists()){
+        const d=snap.val();
+        if(d.from) document.getElementById("dateFrom").value=d.from;
+        if(d.to)   document.getElementById("dateTo").value=d.to;
     }
-  })();
+}
 
-  </script>
+window.saveDates = async()=>{
+    const f=document.getElementById("dateFrom").value;
+    const t=document.getElementById("dateTo").value;
+    await update(ref(db,`${userBase()}/homeDates`),{from:f,to:t});
+};
+
+/* ===== Reset + Logout ===== */
+document.getElementById("btnResetHome").onclick = async ()=>{
+    if(!confirm("Reset Home data?")) return;
+    await remove(ref(db,`${userBase()}/homeBudget`));
+    await remove(ref(db,`${userBase()}/homeDates`));
+    location.reload();
+};
+
+document.getElementById("btnResetAll").onclick = async ()=>{
+    if(!confirm("RESET ALL USER DATA?")) return;
+    await remove(ref(db,`${userBase()}`));
+    alert("All data cleared.");
+    location.reload();
+};
+
+document.getElementById("btnInputData").onclick = ()=>{
+    window.location.href="SalaryInput.html";
+};
+
+document.getElementById("btnLogout").onclick = ()=>{
+    localStorage.removeItem("loggedInUser");
+    window.location.href="login.html";
+};
+
+/* ===== On Page Load ===== */
+window.onload = async ()=>{
+    await loadSavedDates();
+    updateDashboard();
+};
+</script>
+
 </body>
 </html>
