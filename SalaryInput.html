@@ -37,12 +37,16 @@
   <h2>Budget Saver</h2>
   <label>Main Salary</label>
   <input id="salary" type="number" placeholder="Enter salary" />
-  <label>Part-Time Salary</label>
-  <input id="partTime" type="number" placeholder="Enter part-time salary" />
+  <label>Part-Time Earned (Auto from Daily)</label>
+<div id="ptDisplay" style="padding:8px;background:#e8fbe8;border-radius:8px;font-weight:bold;color:#1b5e20">
+    Loading...
+</div>
+
   <div class="buttons">
     <button class="home" id="btnHome">Home</button>
     <button class="save" id="btnSave">Save</button>
     <button class="next" id="btnNext">Next</button>
+    <button class="next" id="btnPTDaily">Part-Time Daily</button> <!-- NEW BUTTON -->
   </div>
 </div>
 
@@ -63,31 +67,60 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const USER = localStorage.getItem("loggedInUser");
+  async function loadPartTimeTotal() {
+  try {
+    const snap = await get(ref(db, `users/${USER}/partTimeDaily/records`));
+    if (!snap.exists()) {
+        document.getElementById("ptDisplay").innerText = "RM0.00";
+        return 0;
+    }
+
+    const records = snap.val();
+    let total = 0;
+
+    Object.values(records).forEach(v => {
+      if (v !== "" && !isNaN(Number(v))) total += Number(v);
+    });
+
+    document.getElementById("ptDisplay").innerText = "RM" + total.toFixed(2);
+    return total;
+
+  } catch (e) {
+    console.error("Part-time daily load failed:", e);
+    document.getElementById("ptDisplay").innerText = "Error";
+    return 0;
+  }
+}
+
 if(!USER){ alert("Please login"); window.location.href="login.html"; throw new Error("no login"); }
 
 async function load(){
   try{
     const s = await get(ref(db, `users/${USER}/salary`));
-    const p = await get(ref(db, `users/${USER}/partTime`));
     if(s.exists()) document.getElementById("salary").value = s.val();
-    if(p.exists()) document.getElementById("partTime").value = p.val();
+
+    await loadPartTimeTotal(); // auto load total from daily page
   }catch(e){ console.error(e); }
 }
 load();
 
 document.getElementById("btnSave").onclick = async ()=>{
   const salaryVal = document.getElementById("salary").value;
-  const partVal = document.getElementById("partTime").value;
+  const partVal = await loadPartTimeTotal();
   try{
     await set(ref(db, `users/${USER}/salary`), salaryVal === "" ? null : Number(salaryVal));
-    await set(ref(db, `users/${USER}/partTime`), partVal === "" ? 0 : Number(partVal));
+    await set(ref(db, `users/${USER}/partTime`), partVal);
     alert("Saved!");
   }catch(e){ console.error(e); alert("Save failed"); }
 };
 
 document.getElementById("btnHome").onclick = ()=> window.location.href = "Home.html";
 document.getElementById("btnNext").onclick = ()=> window.location.href = "Commitment.html";
+  document.getElementById("btnPTDaily").onclick = ()=> 
+    window.location.href = "parttimedaily.html";
+
 </script>
 </body>
 </html>
+
 
