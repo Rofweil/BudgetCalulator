@@ -40,7 +40,7 @@
   <div class="totalBox" id="totalCommit">Total: RM0</div>
 
   <label>Rent</label><input id="rent" type="number" oninput="recalcTotal()">
-  <label>Motorcycle</label><input id="motorcycle" type="number" oninput="recalcTotal()">
+  <label>vehicleLoan</label><input id="vehicleLoan" type="number" oninput="recalcTotal()">
   <label>Telco</label><input id="telco" type="number" oninput="recalcTotal()">
   <label>Electricity</label><input id="electric" type="number" oninput="recalcTotal()">
   <label>Water</label><input id="water" type="number" oninput="recalcTotal()">
@@ -75,7 +75,7 @@ const db = getDatabase(app);
 const USER = localStorage.getItem("loggedInUser");
 if(!USER){ alert("Please login"); window.location.href="login.html"; throw new Error("no login"); }
 
-const commitKeys = ["rent","motorcycle","telco","electric","water","shopee"];
+const commitKeys = ["rent","vehicleLoan","telco","electric","water","shopee"];
 
 async function loadData(){
   try{
@@ -136,4 +136,5 @@ loadData();
 </script>
 </body>
 </html>
+
 
