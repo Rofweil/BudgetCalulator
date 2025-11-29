@@ -5,7 +5,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Salary Input</title>
 <style>
-  body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#e8f5e9;padding:18px}
+  body {
+    background-image: url('BudgetCalculator.png'); 
+    background-size: cover;        /* Make it cover the screen */
+    background-position: center;   /* Center the image */
+    background-repeat: no-repeat;  /* Avoid tiling */
+    background-attachment: fixed;  /* Nice parallax effect */
+}
+    body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255,255,255,0.6); /* Light white overlay */
+    backdrop-filter: blur(3px);
+    z-index: -1;
+}
+  /*body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#e8f5e9;padding:18px}*/
   .container{max-width:420px;margin:auto;background:#fff;padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
   h2{text-align:center;color:#2e7d32;margin:0 0 12px}
   label{display:block;font-weight:bold;color:#1b5e20;margin-top:10px}
@@ -74,3 +90,4 @@ document.getElementById("btnNext").onclick = ()=> window.location.href = "Commit
 </script>
 </body>
 </html>
+
