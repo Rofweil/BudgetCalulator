@@ -223,25 +223,35 @@ function formatLocalDate(d){
 /* ===== Load Income & Commitments ===== */
 async function loadIncomeCommitments() {
     const sal = await get(ref(db, `${userBase()}/salary`));
-    const pt = await get(ref(db, `${userBase()}/partTime`));
-    const com = await get(ref(db, `${userBase()}/commitments`));
 
-    let totalCommit = 0;
-    const d = com.val() || {};
+// LOAD PART-TIME DAILY EARNINGS (sum of all days)
+const ptDailySnap = await get(ref(db, `${userBase()}/partTimeDaily/records`));
 
-    ["rent","vehicleLoan","telco","electric","water","shopee"].forEach(k=>{
-        totalCommit += Number(d[k]||0);
+let totalPartTimeEarned = 0;
+
+if (ptDailySnap.exists()) {
+    const data = ptDailySnap.val();
+    Object.values(data).forEach(entry => {
+        totalPartTimeEarned += Number(entry.amount || 0);
     });
+}
 
-    if (d.other){
-        const list = Array.isArray(d.other) ? d.other : Object.values(d.other);
-        list.forEach(o=> totalCommit += Number(o.amount||0));
-    }
+// LOAD COMMITMENTS
+const com = await get(ref(db, `${userBase()}/commitments`));
+let totalCommit = 0;
+const d = com.val() || {};
+["rent","vehicleLoan","telco","electric","water","shopee"].forEach(k=>{
+    totalCommit += Number(d[k]||0);
+});
+if (d.other){
+    const list = Array.isArray(d.other) ? d.other : Object.values(d.other);
+    list.forEach(o=> totalCommit += Number(o.amount||0));
+}
 
-    return {
-        totalIncome: Number(sal.val()||0) + Number(pt.val()||0),
-        totalCommit
-    };
+return {
+    totalIncome: Number(sal.val()||0) + totalPartTimeEarned,
+    totalCommit
+};
 }
 
 /* ===== Save edited cell ===== */
@@ -403,6 +413,7 @@ window.onload = async ()=>{
 
 </body>
 </html>
+
 
 
 
