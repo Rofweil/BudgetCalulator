@@ -2,24 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Sign Up</title>
 <style>
-  body{font-family:Arial,Helvetica,sans-serif;background:#e8f5e9;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-  .box{background:white;padding:20px;border-radius:12px;width:320px;box-shadow:0 6px 24px rgba(0,0,0,0.12)}
-  h2{color:#2c7a3f;margin:0 0 12px}
-  input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #cfe8d5}
-  button{width:100%;padding:10px;background:#2e8d47;color:#fff;border:none;border-radius:8px;font-weight:bold;cursor:pointer}
-  .link{margin-top:10px;text-align:center}
-  .link a{color:#2e8d47;text-decoration:none;font-weight:bold}
+  body{font-family:Arial,background:#e8f5e9;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+  .box{background:#fff;padding:22px;border-radius:12px;width:340px;box-shadow:0 6px 18px rgba(0,0,0,.12);text-align:center}
+  input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:1px solid #8dcc90;font-size:15px}
+  button{width:100%;padding:10px;background:#2e8d47;color:#fff;border:0;border-radius:8px;cursor:pointer;margin-top:8px}
+  .link{margin-top:12px}
+  .link a{color:#2e8d47;text-decoration:none;font-weight:600}
 </style>
 </head>
 <body>
   <div class="box">
     <h2>Create Account</h2>
-    <input id="username" placeholder="Username" />
+    <input id="username" placeholder="Username (no spaces)" />
     <input id="password" type="password" placeholder="Password" />
-    <input id="repeat" type="password" placeholder="Repeat Password" />
+    <input id="repeat" type="password" placeholder="Repeat password" />
     <button id="btnSign">Sign Up</button>
     <div class="link">Already have an account? <a href="login.html">Login here</a></div>
   </div>
@@ -35,39 +33,53 @@ const firebaseConfig = {
   storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
   messagingSenderId: "574952478496",
   appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
+  measurementId: "G-2LL0GD2K30",
   databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-async function hash(text){
-  const buffer = new TextEncoder().encode(text);
-  const dig = await crypto.subtle.digest("SHA-256", buffer);
-  return Array.from(new Uint8Array(dig)).map(b=>b.toString(16).padStart(2,"0")).join("");
+function normalizeUsername(u){
+  return String(u || "").trim();
+}
+
+async function sha256hex(msg){
+  const data = new TextEncoder().encode(msg);
+  const h = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
 document.getElementById("btnSign").addEventListener("click", async ()=>{
-  const user = document.getElementById("username").value.trim();
-  const pass = document.getElementById("password").value;
-  const rep  = document.getElementById("repeat").value;
-  if(!user || !pass || !rep){ alert("Fill all fields"); return; }
-  if(pass !== rep){ alert("Passwords do not match"); return; }
   try{
-    const userSnap = await get(ref(db, `users/${user}`));
-    if(userSnap.exists()){ alert("Username taken"); return; }
-    const hashed = await hash(pass);
-    await set(ref(db, `users/${user}`), {
+    const username = normalizeUsername(document.getElementById("username").value);
+    const password = document.getElementById("password").value;
+    const repeat = document.getElementById("repeat").value;
+
+    if(!username){ alert("Username required"); return; }
+    if(/\s/.test(username)){ alert("Username cannot contain spaces"); return; }
+    if(!password || !repeat){ alert("Please enter password and repeat it"); return; }
+    if(password !== repeat){ alert("Passwords do not match"); return; }
+
+    const userRef = ref(db, `users/${username}`);
+    const snap = await get(userRef);
+    if(snap.exists()){ alert("Username taken — choose another"); return; }
+
+    const hashed = await sha256hex(password);
+    await set(userRef, {
       password: hashed,
       salary: null,
-      partTime: 0,
-      commitments: {},
+      partTime: null,
+      commitments: { electric: "", motorcycle: "", rent: "", shopee: "", telco: "", water: "" },
       homeDates: {},
       homeBudget: {}
     });
-    alert("Account created — you may login");
+
+    alert("Account created — you can now login");
     window.location.href = "login.html";
   }catch(e){
-    console.error(e); alert("Signup failed");
+    console.error(e);
+    alert("Sign up failed — see console");
   }
 });
 </script>
