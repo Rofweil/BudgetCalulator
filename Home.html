@@ -254,19 +254,21 @@ window.saveUsedBudget = async (d, v) => {
 };
 
 /* Save Today (ADD MODE) */
-document.getElementById("saveToday").addEventListener("click", async () => {
-    const val = Number(document.getElementById("quickInput").value);
-    if (isNaN(val) || val <= 0) return;
+document.getElementById("saveToday").addEventListener("click", async ()=>{
+  const val = Number(document.getElementById("quickInput").value);
+  if (isNaN(val) || val <= 0) return;
 
-    const today = formatDate(new Date());
+  const today = formatLocalDate(new Date());
+  const snap = await get(ref(db, `${userBase()}/homeBudget/${today}`));
+  const existing = snap.exists() ? Number(snap.val()) : 0;
 
-    const snap = await get(ref(db, `${userBase()}/homeBudget`));
-    const existing = snap.exists() && snap.val()[today] ? Number(snap.val()[today]) : 0;
+  // ADD instead of overwrite
+  const newValue = existing + val;
 
-    await set(ref(db, `${userBase()}/homeBudget/${today}`), existing + val);
+  await set(ref(db, `${userBase()}/homeBudget/${today}`), newValue);
 
-    document.getElementById("quickInput").value = "";
-    updateDashboard();
+  document.getElementById("quickInput").value = "";
+  updateDashboard();
 });
 
 /* Update Summary */
@@ -395,3 +397,4 @@ document.getElementById("btnResetAll").onclick = async () => {
 </script>
 </body>
 </html>
+
