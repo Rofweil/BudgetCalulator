@@ -237,16 +237,23 @@ window.saveUsedBudget = async (dateStr,val)=>{
 };
 
 /* ===== Save Today's Spending Button ===== */
-document.getElementById("saveToday").onclick = async () => {
-    const val = Number(document.getElementById("quickInput").value);
-    if (isNaN(val)) return;
+document.getElementById("saveToday").addEventListener("click", async ()=>{
+  const val = Number(document.getElementById("quickInput").value);
+  if (isNaN(val) || val <= 0) return;
 
-    const today = formatLocalDate(new Date());
-    await set(ref(db, `${userBase()}/homeBudget/${today}`), val);
+  const today = formatLocalDate(new Date());
+  const snap = await get(ref(db, `${userBase()}/homeBudget/${today}`));
+  const existing = snap.exists() ? Number(snap.val()) : 0;
 
-    document.getElementById("quickInput").value = "";
-    updateDashboard();
-};
+  // ADD instead of overwrite
+  const newValue = existing + val;
+
+  await set(ref(db, `${userBase()}/homeBudget/${today}`), newValue);
+
+  document.getElementById("quickInput").value = "";
+  updateDashboard();
+});
+
 
 /* ===== Update Summary ===== */
 async function updateSummary(base, fromDate, toDate){
@@ -379,3 +386,4 @@ window.onload = async ()=>{
 
 </body>
 </html>
+
