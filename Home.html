@@ -229,7 +229,7 @@ async function loadIncomeCommitments() {
     let totalCommit = 0;
     const d = com.val() || {};
 
-    ["rent","motorcycle","telco","electric","water","shopee"].forEach(k=>{
+    ["rent","vehicleLoan","telco","electric","water","shopee"].forEach(k=>{
         totalCommit += Number(d[k]||0);
     });
 
@@ -403,6 +403,7 @@ window.onload = async ()=>{
 
 </body>
 </html>
+
 
 
 
