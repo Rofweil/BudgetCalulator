@@ -4,52 +4,118 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Salary Input</title>
+
 <style>
   body {
-    background-image: url('BudgetCalculator.png'); 
-    background-size: cover;        /* Make it cover the screen */
-    background-position: center;   /* Center the image */
-    background-repeat: no-repeat;  /* Avoid tiling */
-    background-attachment: fixed;  /* Nice parallax effect */
-}
-    body::before {
-    content: "";
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(255,255,255,0.6); /* Light white overlay */
-    backdrop-filter: blur(3px);
-    z-index: -1;
-}
-  /*body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#e8f5e9;padding:18px}*/
-  .container{max-width:420px;margin:auto;background:#fff;padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
-  h2{text-align:center;color:#2e7d32;margin:0 0 12px}
-  label{display:block;font-weight:bold;color:#1b5e20;margin-top:10px}
-  input{width:75%;padding:8px;border-radius:8px;border:1px solid #81c784;background:#f1f8f6}
-  .buttons{display:flex;gap:8px;margin-top:18px}
-  button{flex:1;padding:10px;border:none;border-radius:8px;color:#fff;font-weight:bold;cursor:pointer}
-  .home{background:#9e9e9e}.save{background:#388e3c}.next{background:#43a047}
-  @media(max-width:480px){input{width:100%}.buttons{flex-direction:column}}
+      background-image: url('BudgetCalculator.png'); 
+      background-size: cover;
+      background-position: center;
+        background-repeat: no-repeat;
+      background-attachment: fixed;
+  }
+  body::before {
+      content: "";
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(3px);
+      z-index: -1;
+  }
+
+  .container {
+      max-width: 420px;
+      margin: auto;
+      background: #fff;
+      padding: 18px;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  }
+  h2 {
+      text-align: center;
+      color: #2e7d32;
+      margin: 0 0 12px;
+  }
+  label {
+      display: block;
+      font-weight: bold;
+      color: #1b5e20;
+      margin-top: 10px;
+  }
+  input {
+      width: 75%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #81c784;
+      background: #f1f8f6;
+  }
+
+  #ptDisplay, #incomeBreakdown {
+      font-size: 14px;
+      line-height: 1.5;
+  }
+
+  .buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 18px;
+  }
+  button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+  }
+  .home { background: #9e9e9e; }
+  .save { background: #388e3c; }
+  .next { background: #43a047; }
+
+  @media(max-width:480px) {
+      input { width: 100%; }
+      .buttons { flex-direction: column; }
+  }
 </style>
 </head>
+
 <body>
+
 <div class="container">
   <h2>Budget Saver</h2>
+
   <label>Main Salary</label>
   <input id="salary" type="number" placeholder="Enter salary" />
+
   <label>Part-Time Earned (Auto from Daily)</label>
-<div id="ptDisplay" style="padding:8px;background:#e8fbe8;border-radius:8px;font-weight:bold;color:#1b5e20">
-    Loading...
-</div>
+  <div id="ptDisplay" style="padding:8px;background:#e8fbe8;border-radius:8px;font-weight:bold;color:#1b5e20">
+      Loading...
+  </div>
+
+  <!-- NEW Additional Income -->
+  <label>Additional Income</label>
+  <input id="additionalIncome" type="number" placeholder="Enter additional income" />
+
+  <!-- NEW Breakdown -->
+  <div id="incomeBreakdown" 
+      style="margin-top:12px;padding:10px;background:#eefdf0;border-radius:8px;color:#1b5e20">
+      <strong>Income Breakdown:</strong><br>
+      Main: RM <span id="bdMain">0.00</span><br>
+      Part-Time Earned: RM <span id="bdPT">0.00</span><br>
+      Additional: RM <span id="bdAdd">0.00</span><br>
+      <strong style="color:#2c7a3f">Total: RM <span id="bdTotal">0.00</span></strong>
+  </div>
 
   <div class="buttons">
-    <button class="home" id="btnHome">Home</button>
-    <button class="save" id="btnSave">Save</button>
-    <button class="next" id="btnNext">Next</button>
-    <button class="next" id="btnPTDaily">Part-Time Daily</button> <!-- NEW BUTTON -->
+      <button class="home" id="btnHome">Home</button>
+      <button class="save" id="btnSave">Save</button>
+      <button class="next" id="btnNext">Next</button>
+      <button class="next" id="btnPTDaily">Part-Time Daily</button>
   </div>
 </div>
 
+<!-- ================= SCRIPT ================= -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase, ref, get, set } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
@@ -63,11 +129,15 @@ const firebaseConfig = {
   appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
   databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
 const USER = localStorage.getItem("loggedInUser");
-  async function loadPartTimeTotal() {
+if (!USER) { alert("Please login"); window.location.href = "login.html"; }
+
+/* ===== Load Part-Time Daily Total ===== */
+async function loadPartTimeTotal() {
   try {
     const snap = await get(ref(db, `users/${USER}/partTimeDaily/records`));
     if (!snap.exists()) {
@@ -92,36 +162,63 @@ const USER = localStorage.getItem("loggedInUser");
   }
 }
 
-if(!USER){ alert("Please login"); window.location.href="login.html"; throw new Error("no login"); }
+/* ===== Update Breakdown Box ===== */
+async function updateBreakdown() {
+  const main = Number(document.getElementById("salary").value || 0);
+  const add  = Number(document.getElementById("additionalIncome").value || 0);
+  const pt   = await loadPartTimeTotal();
 
-async function load(){
-  try{
+  document.getElementById("bdMain").innerText = main.toFixed(2);
+  document.getElementById("bdPT").innerText   = pt.toFixed(2);
+  document.getElementById("bdAdd").innerText  = add.toFixed(2);
+  document.getElementById("bdTotal").innerText = (main + pt + add).toFixed(2);
+}
+
+/* ===== Load Saved Data ===== */
+async function load() {
+  try {
     const s = await get(ref(db, `users/${USER}/salary`));
-    if(s.exists()) document.getElementById("salary").value = s.val();
+    if (s.exists()) document.getElementById("salary").value = s.val();
 
-    await loadPartTimeTotal(); // auto load total from daily page
-  }catch(e){ console.error(e); }
+    const add = await get(ref(db, `users/${USER}/additionalIncome`));
+    if (add.exists()) document.getElementById("additionalIncome").value = add.val();
+
+    await loadPartTimeTotal();
+    await updateBreakdown();
+
+  } catch (e) { console.error(e); }
 }
 load();
 
-document.getElementById("btnSave").onclick = async ()=>{
+/* Auto-refresh breakdown while typing */
+document.getElementById("salary").addEventListener("input", updateBreakdown);
+document.getElementById("additionalIncome").addEventListener("input", updateBreakdown);
+
+/* ===== Save Button ===== */
+document.getElementById("btnSave").onclick = async () => {
   const salaryVal = document.getElementById("salary").value;
+  const addVal = document.getElementById("additionalIncome").value;
   const partVal = await loadPartTimeTotal();
-  try{
+
+  try {
     await set(ref(db, `users/${USER}/salary`), salaryVal === "" ? null : Number(salaryVal));
+    await set(ref(db, `users/${USER}/additionalIncome`), addVal === "" ? 0 : Number(addVal));
     await set(ref(db, `users/${USER}/partTime`), partVal);
+
     alert("Saved!");
-  }catch(e){ console.error(e); alert("Save failed"); }
+    await updateBreakdown();
+
+  } catch (e) {
+    console.error(e);
+    alert("Save failed");
+  }
 };
 
+/* ===== Navigation ===== */
 document.getElementById("btnHome").onclick = ()=> window.location.href = "Home.html";
 document.getElementById("btnNext").onclick = ()=> window.location.href = "Commitment.html";
-  document.getElementById("btnPTDaily").onclick = ()=> 
-    window.location.href = "PartTimeDaily.html";
+document.getElementById("btnPTDaily").onclick = ()=> window.location.href = "PartTimeDaily.html";
 
 </script>
 </body>
 </html>
-
-
-
