@@ -35,28 +35,26 @@
 </head>
 <body>
 
-<!-- show username in top right -->
-<p style="text-align:right;color:var(--accent);font-weight:bold;margin:4px 0">Logged in as: <span id="welcomeUser">—</span></p>
+<p style="text-align:right;color:var(--accent);font-weight:bold;margin:4px 0">
+  Logged in as: <span id="welcomeUser">—</span>
+</p>
 
-<!-- LOGIN CHECK: non-module script to set window.CURRENT_USER early -->
+<!-- LOGIN CHECK (runs early) -->
 <script>
 (function(){
-  // Accept either key used in your app so we don't break things
-  const userA = localStorage.getItem("loggedInUser");
-  const userB = localStorage.getItem("loggedUser");
-  const user = userA || userB || null;
-  if(!user || (typeof user === "string" && (user.trim()==="" || user==="null" || user==="undefined"))){
+  const A = localStorage.getItem("loggedInUser");
+  const B = localStorage.getItem("loggedUser");
+  const U = A || B || null;
+  if(!U || U.trim()==="" || U==="null" || U==="undefined"){
     localStorage.removeItem("loggedInUser");
     localStorage.removeItem("loggedUser");
     alert("You must login first!");
     window.location.href = "login.html";
     return;
   }
-  window.CURRENT_USER = user;
-  // immediately show username in UI
+  window.CURRENT_USER = U;
   document.addEventListener("DOMContentLoaded", ()=> {
-    const el = document.getElementById("welcomeUser");
-    if(el) el.textContent = window.CURRENT_USER;
+    document.getElementById("welcomeUser").textContent = U;
   });
 })();
 </script>
@@ -95,7 +93,7 @@
   <div class="summary">
     <div class="info-row">
       <div class="info">
-        <div class="small">Total Income (salary + part-time earned)</div>
+        <div class="small">Total Income (salary + part-time + additional)</div>
         <div style="font-weight:bold;font-size:18px">RM <span id="totalIncome">0.00</span></div>
       </div>
       <div class="info">
@@ -124,11 +122,9 @@
 </div>
 
 <script type="module">
-/* === Firebase imports === */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase, ref, get, set, update, remove } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-/* === Config (unchanged) === */
 const firebaseConfig = {
   apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
   authDomain: "budgetcalculator-22ef5.firebaseapp.com",
@@ -138,118 +134,106 @@ const firebaseConfig = {
   appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
   databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* === Utility: local user path === */
-function userBase() { return `users/${window.CURRENT_USER}`; }
+function userBase(){ return `users/${window.CURRENT_USER}`; }
 
-/* === Date helpers (local time safe) === */
 function formatLocalDate(d){
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const day = String(d.getDate()).padStart(2,"0");
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
   return `${y}-${m}-${day}`;
 }
 function parseInputDate(id){
-  const v = document.getElementById(id).value;
+  const v=document.getElementById(id).value;
   if(!v) return null;
-  const [y,m,d] = v.split("-");
+  const [y,m,d]=v.split("-");
   return new Date(Number(y), Number(m)-1, Number(d));
 }
 function two(n){ return Number(n).toFixed(2); }
 
-/* === Load salary, commitments, and part-time earned === */
-async function loadIncomeCommitmentsAndPartTime() {
-  const [salSnap, partSnap, commitSnap, partTimeDailySnap] = await Promise.all([
-    get(ref(db, `${userBase()}/salary`)),
-    get(ref(db, `${userBase()}/partTime`)),
-    get(ref(db, `${userBase()}/commitments`)),
-    get(ref(db, `${userBase()}/partTimeDaily/records`))
+/* === LOAD ALL INCOME SOURCES === */
+async function loadIncomeData(){
+  const [salSnap, addSnap, commitSnap, dailySnap] = await Promise.all([
+    get(ref(db, userBase()+"/salary")),
+    get(ref(db, userBase()+"/additionalIncome")),
+    get(ref(db, userBase()+"/commitments")),
+    get(ref(db, userBase()+"/partTimeDaily/records"))
   ]);
 
-  const salary = Number(salSnap.exists() ? salSnap.val() : 0);
-  // partTime field (legacy) kept but we will compute earned from daily records
-  const partTimeStatic = Number(partSnap.exists() ? partSnap.val() : 0);
+  const salary = Number(salSnap.exists()? salSnap.val() : 0);
+  const additional = Number(addSnap.exists()? addSnap.val() : 0);
 
-  // sum part-time daily earned (structure: partTimeDaily.records.DATE = NUMBER)
   let partTimeEarned = 0;
-  if (partTimeDailySnap.exists()){
-    const recs = partTimeDailySnap.val();
-    Object.values(recs).forEach(v => {
-      const n = Number(v || 0);
-      if (!isNaN(n)) partTimeEarned += n;
+  if(dailySnap.exists()){
+    Object.values(dailySnap.val()).forEach(v=>{
+      const n=Number(v||0);
+      if(!isNaN(n)) partTimeEarned+=n;
     });
   }
 
-  // Commitments total
-  const commits = commitSnap.exists() ? commitSnap.val() : {};
+  const commits = commitSnap.exists()? commitSnap.val() : {};
   let totalCommit = 0;
-  const mainKeys = ["rent","vehicleLoan","telco","electric","water","shopee","motorcycle"];
-  mainKeys.forEach(k => {
-    totalCommit += Number(commits[k] || 0);
-  });
-  if (commits.other){
+
+  const mainKeys=["rent","vehicleLoan","telco","electric","water","shopee","motorcycle"];
+  mainKeys.forEach(k=> totalCommit += Number(commits[k] || 0));
+
+  if(commits.other){
     const list = Array.isArray(commits.other) ? commits.other : Object.values(commits.other);
-    list.forEach(o => { totalCommit += Number(o.amount || 0); });
+    list.forEach(o => totalCommit += Number(o.amount || 0));
   }
 
   return {
     salary,
-    partTimeStatic,
+    additional,
     partTimeEarned,
-    totalIncome: salary + partTimeEarned, // main salary + part-time earned (as requested)
+    totalIncome: salary + additional + partTimeEarned,
     totalCommit
   };
 }
 
-/* === Save used spending for a date (manual edit in table) === */
-window.saveUsedBudget = async function(dateStr, val){
-  const node = ref(db, `${userBase()}/homeBudget/${dateStr}`);
-  if (val === "" || val === null) {
-    await remove(node);
-  } else {
-    const n = Number(val);
-    if (!isNaN(n)) await set(node, n);
+/* === Save manual edits === */
+window.saveUsedBudget = async function(dateStr,val){
+  const node=ref(db, userBase()+"/homeBudget/"+dateStr);
+  if(val==="" || val===null) await remove(node);
+  else{
+    const n=Number(val);
+    if(!isNaN(n)) await set(node,n);
   }
   await updateDashboard();
 };
 
-/* === Save Today's spending button: ADD (not overwrite) === */
-document.getElementById("saveToday").addEventListener("click", async () => {
-  const raw = document.getElementById("quickInput").value;
-  const add = Number(raw);
-  if (isNaN(add) || add <= 0) {
-    // nothing to add
-    return;
-  }
-  const today = formatLocalDate(new Date());
-  const snap = await get(ref(db, `${userBase()}/homeBudget/${today}`));
-  const existing = snap.exists() ? Number(snap.val()) : 0;
-  const newVal = Number(existing) + Number(add);
-  await set(ref(db, `${userBase()}/homeBudget/${today}`), newVal);
-  document.getElementById("quickInput").value = "";
+/* === Save TODAY (ADD not overwrite) === */
+document.getElementById("saveToday").addEventListener("click", async ()=>{
+  const add=Number(document.getElementById("quickInput").value);
+  if(isNaN(add) || add<=0) return;
+  const today=formatLocalDate(new Date());
+  const snap=await get(ref(db, userBase()+"/homeBudget/"+today));
+  const existing=snap.exists()? Number(snap.val()) : 0;
+  await set(ref(db, userBase()+"/homeBudget/"+today), existing + add);
+  document.getElementById("quickInput").value="";
   await updateDashboard();
 });
 
-/* === Save Dates button (mobile friendly) === */
-document.getElementById("btnSaveDates").addEventListener("click", async () => {
-  const f = document.getElementById("dateFrom").value || "";
-  const t = document.getElementById("dateTo").value || "";
-  await update(ref(db, `${userBase()}/homeDates`), { from: f, to: t });
+/* === Save Dates === */
+document.getElementById("btnSaveDates").onclick = async ()=>{
+  const f=document.getElementById("dateFrom").value;
+  const t=document.getElementById("dateTo").value;
+  await update(ref(db, userBase()+"/homeDates"), {from:f,to:t});
   alert("Dates saved.");
   await updateDashboard();
-});
+};
 
-/* === Summary update === */
+/* === SUMMARY AREA === */
 async function updateSummary(baseDaily, fromDate, toDate){
-  const {totalIncome, totalCommit, partTimeEarned} = await loadIncomeCommitmentsAndPartTime();
-  // sum homeBudget used
-  const usedSnap = await get(ref(db, `${userBase()}/homeBudget`));
+  const {totalIncome,totalCommit,partTimeEarned,additional}= await loadIncomeData();
+
+  const usedSnap = await get(ref(db, userBase()+"/homeBudget"));
   let usedTotal = 0;
-  if (usedSnap.exists()){
-    Object.values(usedSnap.val()).forEach(v => usedTotal += Number(v || 0));
+  if(usedSnap.exists()){
+    Object.values(usedSnap.val()).forEach(v=> usedTotal += Number(v||0));
   }
+
   const remaining = (totalIncome - totalCommit) - usedTotal;
 
   document.getElementById("totalIncome").textContent = two(totalIncome);
@@ -258,105 +242,102 @@ async function updateSummary(baseDaily, fromDate, toDate){
   document.getElementById("dailyBudget").textContent = two(baseDaily);
   document.getElementById("partTimeEarned").textContent = two(partTimeEarned);
 
-  const today = new Date(); today.setHours(0,0,0,0);
-  const daysLeft = Math.max(0, Math.ceil((toDate - today)/86400000));
+  const today=new Date(); today.setHours(0,0,0,0);
+  const daysLeft=Math.max(0,Math.ceil((toDate - today)/86400000));
   document.getElementById("daysLeft").textContent = daysLeft;
 }
 
-/* === Generate table with carry-forward logic === */
-async function generateTable(from, to, baseDaily){
-  const tbody = document.querySelector("#budgetTable tbody");
-  tbody.innerHTML = "";
-  const usedSnap = await get(ref(db, `${userBase()}/homeBudget`));
-  const used = usedSnap.exists() ? usedSnap.val() : {};
+/* === Generate Table === */
+async function generateTable(from,to,baseDaily){
+  const tbody=document.querySelector("#budgetTable tbody");
+  tbody.innerHTML="";
+  const usedSnap=await get(ref(db, userBase()+"/homeBudget"));
+  const used=usedSnap.exists()? usedSnap.val() : {};
 
-  let current = new Date(from); current.setHours(0,0,0,0);
-  const today = new Date(); today.setHours(0,0,0,0);
-  const todayStr = formatLocalDate(today);
+  let current=new Date(from); current.setHours(0,0,0,0);
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayStr=formatLocalDate(today);
 
-  let leftover = 0;
-  while (current <= to){
-    const ds = formatLocalDate(current);
-    let show = baseDaily;
-    if (ds < todayStr) show = 0;
-    else if (ds === todayStr) show = baseDaily + leftover;
+  let leftover=0;
 
-    const inputVal = used[ds] !== undefined && used[ds] !== null ? used[ds] : "";
-    const row = document.createElement("tr");
+  while(current<=to){
+    const ds=formatLocalDate(current);
+    let show=baseDaily;
+    if(ds < todayStr) show=0;
+    else if(ds === todayStr) show = baseDaily + leftover;
+
+    const val = used[ds]!==undefined ? used[ds] : "";
+
+    const row=document.createElement("tr");
     row.innerHTML = `
       <td>${ds}</td>
       <td>${two(show)}</td>
-      <td><input class="usedBudgetInput" type="number" value="${inputVal}" oninput="saveUsedBudget('${ds}', this.value)"></td>
+      <td><input class="usedBudgetInput" type="number" value="${val}"
+          oninput="saveUsedBudget('${ds}', this.value)"></td>
     `;
     tbody.appendChild(row);
 
-    if (ds < todayStr) leftover += baseDaily - Number(used[ds] || 0);
-    current.setDate(current.getDate() + 1);
+    if(ds < todayStr) leftover += baseDaily - Number(used[ds]||0);
+
+    current.setDate(current.getDate()+1);
   }
 }
 
-/* === Main updateDashboard === */
+/* === Main Dashboard === */
 window.updateDashboard = async function(){
-  const from = parseInputDate("dateFrom");
-  const to = parseInputDate("dateTo");
-  if (!from || !to) return;
+  const from=parseInputDate("dateFrom");
+  const to=parseInputDate("dateTo");
+  if(!from || !to) return;
 
-  const { totalIncome, totalCommit } = await loadIncomeCommitmentsAndPartTime();
-  const net = totalIncome - totalCommit;
-  const totalDays = Math.max(1, Math.ceil((to - from)/86400000) + 1);
-  const base = net / totalDays;
+  const {totalIncome,totalCommit} = await loadIncomeData();
+  const net=totalIncome - totalCommit;
+  const totalDays=Math.max(1,Math.ceil((to - from)/86400000)+1);
+  const base=net/totalDays;
 
   await updateSummary(base, from, to);
   await generateTable(from, to, base);
 };
 
-/* === Load saved dates into inputs === */
+/* === Load Saved Dates === */
 async function loadSavedDates(){
-  const snap = await get(ref(db, `${userBase()}/homeDates`));
-  if (snap.exists()){
-    const d = snap.val();
-    if (d.from) document.getElementById("dateFrom").value = d.from;
-    if (d.to)   document.getElementById("dateTo").value = d.to;
+  const snap=await get(ref(db, userBase()+"/homeDates"));
+  if(snap.exists()){
+    const d=snap.val();
+    if(d.from) document.getElementById("dateFrom").value=d.from;
+    if(d.to) document.getElementById("dateTo").value=d.to;
   }
 }
 
-/* === Reset, ResetAll, Nav, Logout === */
-document.getElementById("btnResetHome").onclick = async () => {
-  if (!confirm("Reset Home data?")) return;
-  await remove(ref(db, `${userBase()}/homeBudget`));
-  await remove(ref(db, `${userBase()}/homeDates`));
+/* === Buttons === */
+document.getElementById("btnResetHome").onclick = async ()=>{
+  if(!confirm("Reset Home data?")) return;
+  await remove(ref(db, userBase()+"/homeBudget"));
+  await remove(ref(db, userBase()+"/homeDates"));
   location.reload();
 };
 
-document.getElementById("btnResetAll").onclick = async () => {
-  if (!confirm("RESET ALL USER DATA?")) return;
-  await remove(ref(db, `${userBase()}`));
+document.getElementById("btnResetAll").onclick = async ()=>{
+  if(!confirm("RESET ALL USER DATA?")) return;
+  await remove(ref(db, userBase()));
   alert("All data cleared.");
   location.reload();
 };
 
-document.getElementById("btnInputData").onclick = () => {
-  window.location.href = "SalaryInput.html";
-};
+document.getElementById("btnInputData").onclick = ()=> window.location.href="SalaryInput.html";
 
-document.getElementById("btnLogout").onclick = () => {
+document.getElementById("btnLogout").onclick = ()=>{
   localStorage.removeItem("loggedInUser");
   localStorage.removeItem("loggedUser");
-  window.location.href = "login.html";
+  window.location.href="login.html";
 };
 
-/* === On page load: load dates and update === */
-window.addEventListener("DOMContentLoaded", async () => {
-  // safety: wait until CURRENT_USER is set by earlier non-module script
-  if (!window.CURRENT_USER) {
-    // If not present, try reading localStorage as a last resort
+/* === On Load === */
+window.addEventListener("DOMContentLoaded", async ()=>{
+  if(!window.CURRENT_USER){
     window.CURRENT_USER = localStorage.getItem("loggedInUser") || localStorage.getItem("loggedUser");
-    if (!window.CURRENT_USER) {
-      alert("You must login first!");
-      window.location.href = "login.html";
-      return;
+    if(!window.CURRENT_USER){
+      alert("You must login first!"); window.location.href="login.html"; return;
     }
-    document.getElementById("welcomeUser").textContent = window.CURRENT_USER;
   }
 
   await loadSavedDates();
