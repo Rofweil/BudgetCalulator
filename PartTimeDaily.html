@@ -6,49 +6,45 @@
 <title>Part Time Daily</title>
 <style>
   :root{
-    --green:#d2f8d2;   /* success (achieved) */
-    --red:#ffd6d6;     /* missed (past, not achieved) */
-    --normal:#ffffff;  /* default */
+    --green:#2e8d47;
+    --light:#dff4e3;
     --accent:#2c7a3f;
+    --danger:#e44545;
+    --muted:#8dcc90;
+    --bg:#f2faf3;
   }
-
-  body{font-family:Arial,Helvetica,sans-serif;background:#f2faf3;margin:0;padding:15px}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;padding:15px}
   .container{max-width:1000px;margin:auto;background:#fff;padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
-  h2{text-align:center;color:var(--accent);margin:0 0 10px}
-  label{font-weight:bold;display:block;margin-top:10px;color:#2b7a38}
-  input[type="date"],input[type="number"]{width:100%;padding:9px;border-radius:8px;border:1px solid #8dcc90;margin-top:6px;box-sizing:border-box}
-  .summary{background:#dff4e3;padding:12px;border-radius:10px;margin-top:12px}
+  h2{color:var(--accent);text-align:center;margin:0 0 12px}
+  label{display:block;margin-top:10px;font-weight:bold;color:#2b7a38}
+  input[type="date"],input[type="number"]{width:100%;padding:9px;border-radius:8px;border:1px solid var(--muted);margin-top:6px;box-sizing:border-box}
+  .summary{background:var(--light);padding:12px;border-radius:10px;margin-top:12px}
   .toggleRow{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   table{width:100%;border-collapse:collapse;margin-top:12px}
   th,td{border:1px solid #b5dfbb;padding:8px;text-align:center}
   th{background:#bfe6c7}
-  .amountInput{width:90px;padding:6px}
+  .amountInput{width:110px;padding:6px}
   .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
   .btn{flex:1;padding:10px;border-radius:8px;border:none;color:#fff;font-weight:bold;cursor:pointer}
-  .save{background:#2e8d47}
-  .back{background:#444}
-  .settingsSave{background:#1f8dd6}
-  .muted{color:#666;font-size:13px}
-  @media(max-width:480px){
-    .amountInput{width:70px}
-    .controls{flex-direction:column}
-  }
-  /* coloring helper classes applied to table rows */
-  .row-achieved{background:var(--green)}
-  .row-missed{background:var(--red)}
-  .row-normal{background:var(--normal)}
+  .save{background:var(--green)} .back{background:#444} .settingsSave{background:#1f8dd6}
+  .past-good{background:#e8f8ed}    /* green-ish background for achieved past */
+  .past-bad{background:#ffecec}     /* red-ish background for missed past */
+  .today-row{background:#fffbea}    /* neutral highlight for today */
+  .future-row{background:transparent}
   .small{font-size:13px;color:#333}
+  @media(max-width:480px){ .amountInput{width:90px} .controls{flex-direction:column} }
+  .mutedNote{font-size:13px;color:#666;margin-top:8px}
 </style>
 </head>
 <body>
 
-<p style="text-align:right;color:var(--accent);font-weight:bold">Logged in as: <span id="welcomeUser">—</span></p>
+<p style="text-align:right;color:var(--accent);font-weight:bold">Logged in as: <span id="welcomeUser"></span></p>
 
-<!-- Lightweight non-module login check so module code can rely on user -->
+<!-- Non-module login check: sets window.CURRENT_USER early -->
 <script>
 (function(){
   const user = localStorage.getItem("loggedInUser") || localStorage.getItem("loggedUser");
-  if (!user || (typeof user === "string" && (user.trim()==="" || user==="null" || user==="undefined"))) {
+  if (!user || (typeof user==='string' && (user.trim()==="" || user==="null" || user==="undefined"))) {
     localStorage.removeItem("loggedInUser");
     localStorage.removeItem("loggedUser");
     alert("You must login first!");
@@ -56,7 +52,7 @@
     return;
   }
   window.CURRENT_USER = user;
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", ()=> {
     const el = document.getElementById("welcomeUser");
     if (el) el.textContent = user;
   });
@@ -73,18 +69,19 @@
   <input id="dateTo" type="date">
 
   <label for="goalAmount">Goal Amount (RM):</label>
-  <input id="goalAmount" type="number" step="0.01" placeholder="Enter total goal">
+  <input id="goalAmount" type="number" step="0.01" placeholder="Enter target">
 
   <div class="toggleRow">
     <input id="showDailyGoal" type="checkbox">
-    <label for="showDailyGoal" style="margin-top:0">Show Daily Goal</label>
-    <button id="btnSaveSettings" class="btn settingsSave" style="flex:none;margin-left:auto">Save Settings</button>
+    <label for="showDailyGoal" style="margin-top:0">Show Daily Goal (if checked, original daily goal will be visible for computed cells)</label>
+    <button id="btnSaveSettings" class="btn settingsSave" style="flex: none; margin-left:auto">Save Settings</button>
   </div>
 
   <div class="summary">
-    <p class="small">Total Earned: RM <span id="totalEarned">0.00</span></p>
-    <p class="small">Goal Amount: RM <span id="goalDisplay">0.00</span></p>
-    <p class="small">Remaining: RM <span id="remaining">0.00</span></p>
+    <p>Total Earned: RM <strong><span id="totalEarned">0.00</span></strong></p>
+    <p>Goal Amount: RM <strong><span id="goalDisplay">0.00</span></strong></p>
+    <p>Remaining: RM <strong><span id="remaining">0.00</span></strong></p>
+    <div class="mutedNote">Past rows are locked (read-only) and compare with the <strong>original daily goal</strong>. Today & future rows are editable.</div>
   </div>
 
   <table id="ptTable" aria-label="part-time table">
@@ -109,12 +106,11 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-/* Firebase config (same as your project) */
 const firebaseConfig = {
   apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
   authDomain: "budgetcalculator-22ef5.firebaseapp.com",
   projectId: "budgetcalculator-22ef5",
-  storageBucket: "budgetcalculator-22ef5.firebasedatabase.app",
+  storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
   messagingSenderId: "574952478496",
   appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
   databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
@@ -122,29 +118,33 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* Base path for this feature */
 const USER = window.CURRENT_USER;
-if (!USER) { alert("Not logged in"); window.location.href = "login.html"; throw new Error("no user"); }
+if (!USER) {
+  alert("Not logged in");
+  window.location.href = "login.html";
+}
+
+// DB base path for this feature
 const BASE = `users/${USER}/partTimeDaily`;
 
-/* Helpers */
+/* ---------- Helpers ---------- */
 function formatDateLocal(d){
   const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const day = String(d.getDate()).padStart(2,"0");
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
 function parseDateInput(id){
   const v = document.getElementById(id).value;
   if(!v) return null;
-  const [y,m,d] = v.split("-");
+  const [y,m,d] = v.split('-');
   return new Date(Number(y), Number(m)-1, Number(d));
 }
 function two(n){ return Number(n || 0).toFixed(2); }
 
-/* Load settings (dates, goal, showDaily) */
+/* ---------- Load settings (dates, goal, showDaily) ---------- */
 async function loadSettings(){
-  try{
+  try {
     const snap = await get(ref(db, `${BASE}/settings`));
     if (!snap.exists()) return;
     const s = snap.val();
@@ -152,205 +152,272 @@ async function loadSettings(){
     if (s.to) document.getElementById("dateTo").value = s.to;
     if (s.goal !== undefined) document.getElementById("goalAmount").value = s.goal;
     document.getElementById("showDailyGoal").checked = !!s.showDaily;
-  }catch(err){ console.error("loadSettings", err); }
+  } catch (err) {
+    console.error("loadSettings", err);
+  }
 }
 
-/* Save settings */
+/* ---------- Save settings ---------- */
 async function saveSettings(){
-  try{
+  try {
     const from = document.getElementById("dateFrom").value || "";
-    const to = document.getElementById("dateTo").value || "";
+    const to   = document.getElementById("dateTo").value || "";
     const goal = document.getElementById("goalAmount").value || "";
     const showDaily = !!document.getElementById("showDailyGoal").checked;
     await update(ref(db, `${BASE}/settings`), { from, to, goal, showDaily });
     await loadTable();
     alert("Settings saved.");
-  }catch(err){ console.error("saveSettings", err); alert("Save settings failed"); }
+  } catch (err) {
+    console.error("saveSettings", err);
+    alert("Save settings failed (see console).");
+  }
 }
 
-/* Load table & compute rolling daily goals & colors */
+/* ---------- Load table ---------- */
 async function loadTable(){
-  try{
+  try {
     const f = document.getElementById("dateFrom").value;
     const t = document.getElementById("dateTo").value;
     if (!f || !t) {
       document.querySelector("#ptTable tbody").innerHTML = "";
-      updateSummary(); 
+      updateSummary(); // show zeros
       return;
     }
 
-    const from = new Date(f); const to = new Date(t);
-    from.setHours(0,0,0,0); to.setHours(0,0,0,0);
+    const from = new Date(f);
+    const to = new Date(t);
+    from.setHours(0,0,0,0);
+    to.setHours(0,0,0,0);
 
-    // Read saved records and settings
-    const [snapRecords, snapSettings] = await Promise.all([
-      get(ref(db, `${BASE}/records`)),
-      get(ref(db, `${BASE}/settings`))
-    ]);
-    const saved = snapRecords.exists() ? snapRecords.val() : {};
-    const settings = snapSettings.exists() ? snapSettings.val() : {};
-    const totalGoal = Number(document.getElementById("goalAmount").value || settings.goal || 0);
-    const showDaily = document.getElementById("showDailyGoal").checked;
+    // original daily goal (based on total days)
+    const goalVal = Number(document.getElementById("goalAmount").value || 0);
+    const totalDays = Math.max(1, Math.floor((to - from)/86400000) + 1);
+    const originalDailyGoal = totalDays > 0 ? (goalVal / totalDays) : 0;
 
-    const tbody = document.querySelector("#ptTable tbody");
-    tbody.innerHTML = "";
+    // read saved records
+    const snap = await get(ref(db, `${BASE}/records`));
+    const saved = snap.exists() ? snap.val() : {};
 
-    // We'll iterate from start to end and compute assigned goals dynamically.
-    let remainingGoal = totalGoal;
-
-    // To compute remainingGoal correctly we must iterate each date and subtract the saved earned for that date as we go.
-    // But assignedGoal for day = round(remainingGoal / remainingDaysInclusive, 2)
-    const daysArr = [];
-    let cur = new Date(from);
-    while(cur <= to){
-      daysArr.push(new Date(cur));
-      cur.setDate(cur.getDate() + 1);
-    }
-
-    // Pre-calc to ensure consistent rounding: iterate in order
-    for (let i = 0; i < daysArr.length; i++){
-      const date = daysArr[i];
-      const ds = formatDateLocal(date);
-      const remainingDaysInclusive = daysArr.length - i;
-      // avoid division by zero
-      const assignedRaw = remainingDaysInclusive > 0 ? (remainingGoal / remainingDaysInclusive) : 0;
-      const assigned = Number(isFinite(assignedRaw) ? assignedRaw : 0);
-      // We will display rounded assigned (2 decimals) when appropriate
-      const savedVal = saved[ds] !== undefined && saved[ds] !== "" ? Number(saved[ds]) : 0;
-
-      // Build a row object and then subtract saved after recording the row
-      const rowObj = {
-        date: ds,
-        assigned: assigned,   // raw (unrounded) used for carry-forward math; displayed will be rounded
-        earned: savedVal
-      };
-      // push to a collection
-      // after building the row, subtract actual earned from remainingGoal so next days adjust
-      remainingGoal = remainingGoal - savedVal;
-      // store row for rendering later (we need assigned based on remainingGoal at that time)
-      daysArr[i] = rowObj;
-    }
-
-    // Now render rows and apply coloring rules using today's date
+    // compute totals needed to assign future daily goals after today
     const today = new Date(); today.setHours(0,0,0,0);
     const todayStr = formatDateLocal(today);
 
-    for (let i = 0; i < daysArr.length; i++){
-      const r = daysArr[i];
-      // assigned for display: recalc using remainingGoal logic but we already kept the raw assigned at that moment.
-      // For display we round assigned to 2 decimals.
-      const assignedDisplay = Number(r.assigned).toFixed(2);
+    // compute total earned so far (all records) — we'll use this for summary
+    let totalEarnedAll = 0;
+    Object.entries(saved).forEach(([k,v])=>{
+      const num = (v==="" ? 0 : Number(v));
+      if (!isNaN(num)) totalEarnedAll += num;
+    });
 
-      // Determine displayed daily goal: per your rules, if earned >= assigned => show 0 for that day, else show assigned
-      const showGoalValue = (r.earned >= Number((r.assigned).toFixed(8))) ? 0 : Number(assignedDisplay);
+    // Build table rows
+    const tbody = document.querySelector("#ptTable tbody");
+    tbody.innerHTML = "";
 
-      // Determine row color:
-      let rowClass = "row-normal";
-      if (r.date < todayStr) {
-        // past
-        if (r.earned >= Number(r.assigned.toFixed ? r.assigned.toFixed(8) : r.assigned)) rowClass = "row-achieved";
-        else rowClass = "row-missed";
-      } else {
-        // today or future show normal
-        rowClass = "row-normal";
+    // We'll compute "remainingGoalAfterToday" = goal - earnedUpToAndIncludingTodayAdjusted
+    // But per rules: past days compare vs originalDailyGoal. For distribution of future, we
+    // need to find how much of the goal remains after accounting for past+today earnings.
+    // We'll compute pastEarned (<= yesterday), earnedToday separately.
+
+    let pastEarned = 0;        // sum of earned for dates < today
+    let earnedToday = 0;       // earned for today (if exists in saved)
+    // collect saved entries for quick lookup
+    // saved may store empty strings — treat as 0
+    // Note: we will not modify saved here; Save All will write.
+
+    // iterate days to compute pastEarned and identify date order
+    let current = new Date(from);
+    current.setHours(0,0,0,0);
+    while (current <= to) {
+      const ds = formatDateLocal(current);
+      const val = saved[ds];
+      const num = (val === "" || val === undefined) ? 0 : Number(val);
+      if (!isNaN(num)) {
+        if (ds < todayStr) pastEarned += num;
+        else if (ds === todayStr) earnedToday += num;
       }
-
-      // If user toggled showDailyGoal off, we render '-' instead of the daily goal number.
-      const showDaily = document.getElementById("showDailyGoal").checked;
-      const goalCellText = showDaily ? two(showGoalValue) : "-";
-
-      const earnedVal = r.earned === 0 ? "" : two(r.earned);
-
-      const tr = document.createElement("tr");
-      tr.className = rowClass;
-      tr.innerHTML = `
-        <td>${r.date}</td>
-        <td>${goalCellText}</td>
-        <td><input class="amountInput" type="number" step="0.01" id="amt-${r.date}" value="${earnedVal}" /></td>
-      `;
-      tbody.appendChild(tr);
+      current.setDate(current.getDate() + 1);
     }
 
-    // After rendering, update summary
-    await updateSummary();
-  }catch(err){
+    // remainingGoalAfterToday = goal - (pastEarned + earnedToday)
+    let remainingGoalAfterToday = Number(goalVal || 0) - (pastEarned + earnedToday);
+    if (remainingGoalAfterToday < 0) remainingGoalAfterToday = 0;
+
+    // Count remaining future days (strictly after today)
+    let remainingFutureDays = 0;
+    current = new Date(from);
+    current.setHours(0,0,0,0);
+    while (current <= to) {
+      const ds = formatDateLocal(current);
+      if (ds > todayStr) remainingFutureDays++;
+      current.setDate(current.getDate() + 1);
+    }
+
+    // Loop again to render rows with the rules:
+    // - Past rows (ds < today): Daily Goal cell shows originalDailyGoal (two decimals). Lock earned input.
+    //   Color green/red depending on whether earned >= originalDailyGoal.
+    // - Today (ds === today): Daily Goal cell shows max(0, originalDailyGoal - earnedToday) (two decimals).
+    //   Editable input for earned.
+    // - Future (ds > today): Daily Goal = remainingGoalAfterToday / remainingFutureDays (two decimals).
+    //   Editable input for earned.
+    //
+    // Important: for display the originalDailyGoal is shown for past rows. If "Show Daily Goal" unchecked,
+    // still keep it visible (user asked option earlier) — but we follow "showDailyGoal" flag; if unchecked,
+    // display '-' for daily goal cells (but you asked earlier to show originalDailyGoal for past; user chose A,
+    // so keep showing originalDailyGoal regardless — we will implement: if showDailyGoal is checked, show values;
+    // if not checked, show '-' for daily goal **only for non-past rows**. Because you chose A previously, we keep
+    // originalDailyGoal visible for past always. To keep things simple we will: show originalDailyGoal for past always;
+    // for today/future show daily numbers only if showDailyGoal is checked.)
+    const showDaily = !!document.getElementById("showDailyGoal").checked;
+
+    current = new Date(from);
+    current.setHours(0,0,0,0);
+    while (current <= to) {
+      const ds = formatDateLocal(current);
+      const savedVal = saved[ds];
+      const numVal = (savedVal === "" || savedVal === undefined) ? "" : Number(savedVal);
+
+      const tr = document.createElement("tr");
+
+      // determine cell values
+      let dailyGoalCell = "-";
+      let earnedCellHtml = "";
+      let rowClass = "future-row";
+
+      if (ds < todayStr) {
+        // past
+        dailyGoalCell = two(originalDailyGoal);
+        const earnedNum = (numVal === "" ? 0 : Number(numVal));
+        // color
+        if (!isNaN(earnedNum) && earnedNum >= originalDailyGoal - 1e-9) {
+          rowClass = "past-good";
+        } else {
+          rowClass = "past-bad";
+        }
+        // earned field is read-only
+        earnedCellHtml = `<input class="amountInput" type="number" step="0.01" value="${earnedNum === 0 && savedVal==="" ? "" : two(earnedNum)}" data-date="${ds}" readonly>`;
+      } else if (ds === todayStr) {
+        // today
+        const earnedNum = (numVal === "" ? 0 : Number(numVal));
+        // today's adjusted goal = originalDailyGoal - earnedToday (based on saved)
+        let adjustedTodayGoal = originalDailyGoal - earnedNum;
+        if (adjustedTodayGoal < 0) adjustedTodayGoal = 0;
+        dailyGoalCell = two(adjustedTodayGoal);
+        rowClass = "today-row";
+        earnedCellHtml = `<input class="amountInput" type="number" step="0.01" value="${numVal === "" ? "" : two(Number(numVal))}" data-date="${ds}">`;
+      } else {
+        // future
+        // daily future = remainingGoalAfterToday / remainingFutureDays
+        const futureGoal = remainingFutureDays > 0 ? (remainingGoalAfterToday / remainingFutureDays) : 0;
+        dailyGoalCell = two(futureGoal);
+        rowClass = "future-row";
+        earnedCellHtml = `<input class="amountInput" type="number" step="0.01" value="${numVal === "" ? "" : two(Number(numVal))}" data-date="${ds}">`;
+      }
+
+      tr.className = rowClass;
+      tr.innerHTML = `
+        <td>${ds}</td>
+        <td>${dailyGoalCell}</td>
+        <td>${earnedCellHtml}</td>
+      `;
+      tbody.appendChild(tr);
+
+      current.setDate(current.getDate() + 1);
+    }
+
+    // attach keyboard/enter behavior to inputs (single-day save on Enter) and ensure numeric formatting on blur
+    document.querySelectorAll(".amountInput").forEach(input => {
+      // Save single day on Enter
+      input.addEventListener("keydown", async (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          const date = input.getAttribute("data-date");
+          const v = input.value;
+          const node = ref(db, `${BASE}/records/${date}`);
+          const payload = (v === "" ? "" : Number(v));
+          try {
+            await set(node, payload);
+            await updateSummaryAndRerender();
+          } catch (err) {
+            console.error("single save error", err);
+            alert("Save failed (see console).");
+          }
+        }
+      });
+      // Format on blur (two decimals) but keep blank if empty
+      input.addEventListener("blur", () => {
+        if (input.hasAttribute("readonly")) return;
+        const v = input.value;
+        if (v === "" || v === null) return;
+        if (!isNaN(Number(v))) input.value = two(Number(v));
+      });
+    });
+
+    // update summary display (uses saved values)
+    await updateSummary(); // uses live saved snapshot
+  } catch (err) {
     console.error("loadTable error:", err);
   }
 }
 
-/* Update summary display */
+/* ---------- Update summary ---------- */
 async function updateSummary(){
-  try{
+  try {
     const snap = await get(ref(db, `${BASE}/records`));
     const records = snap.exists() ? snap.val() : {};
     let total = 0;
     Object.values(records).forEach(v => {
       if (v !== "" && !isNaN(Number(v))) total += Number(v);
     });
-
     const goal = Number(document.getElementById("goalAmount").value || 0);
     const remaining = goal - total;
     document.getElementById("totalEarned").textContent = two(total);
     document.getElementById("goalDisplay").textContent = two(goal);
     document.getElementById("remaining").textContent = two(remaining);
-  }catch(err){ console.error("updateSummary", err); }
+  } catch (err) {
+    console.error("updateSummary error:", err);
+  }
 }
 
-/* Save all table inputs to DB (overwrites records node) */
+/* ---------- Save all (writes all visible inputs) ---------- */
 async function saveAll(){
-  try{
-    const rows = document.querySelectorAll(".amountInput");
+  try {
+    // gather inputs (only those with data-date attribute)
+    const inputs = document.querySelectorAll(".amountInput");
     const payload = {};
-    rows.forEach(input => {
-      const id = input.id.replace("amt-","");
-      const v = input.value;
-      // store number or empty string (keeps structure)
-      payload[id] = (v === "" ? "" : Number(v));
+    inputs.forEach(i => {
+      const date = i.getAttribute("data-date");
+      // if readonly past input may have value or empty; keep their value as-is (we still write saved)
+      const v = i.value;
+      payload[date] = (v === "" ? "" : Number(v));
     });
+    // write atomically
     await set(ref(db, `${BASE}/records`), payload);
-    await updateSummary();
-    // reload table so assigned goals and colors update
-    await loadTable();
+    await updateSummaryAndRerender();
     alert("Saved all daily amounts.");
-  }catch(err){ console.error("saveAll", err); alert("Save failed — see console"); }
+  } catch (err) {
+    console.error("saveAll error", err);
+    alert("Save failed — see console.");
+  }
 }
 
-/* Save single day (used when pressing Enter inside a cell) */
-async function saveSingle(date, value){
-  try{
-    const node = ref(db, `${BASE}/records/${date}`);
-    const payload = (value === "" ? "" : Number(value));
-    await set(node, payload);
-    await updateSummary();
-    await loadTable();
-  }catch(err){ console.error("saveSingle", err); alert("Save failed (see console)"); }
+/* ---------- Helper to update summary and re-render table (keeps UI in sync) ---------- */
+async function updateSummaryAndRerender(){
+  await updateSummary();
+  await loadTable();
 }
 
-/* Attach events */
+/* ---------- Attach events ---------- */
 document.getElementById("btnSaveAll").addEventListener("click", saveAll);
 document.getElementById("btnBack").addEventListener("click", ()=> window.location.href = "Home.html");
 document.getElementById("btnSaveSettings").addEventListener("click", saveSettings);
 document.getElementById("showDailyGoal").addEventListener("change", loadTable);
 
-// Enter key handler: if focused element is .amountInput, save that single day
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    const el = document.activeElement;
-    if (el && el.classList && el.classList.contains("amountInput")) {
-      const fullId = el.id; // "amt-YYYY-MM-DD"
-      const date = fullId.replace("amt-","");
-      const v = el.value;
-      saveSingle(date, v);
-    }
-  }
-});
-
-/* Initial load: settings then table */
+/* ---------- Initial load ---------- */
 window.addEventListener("load", async () => {
   await loadSettings();
   await loadTable();
 });
-</script>
 
+</script>
 </body>
 </html>
