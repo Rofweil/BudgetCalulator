@@ -163,7 +163,8 @@ async function saveSettings(){
 }
 
 /* ---------------- UPDATED DAILY GOAL RULES (A) ---------------- */
-async function loadTable(){
+/* ---------------- NEW PROGRESSIVE DAILY GOAL LOGIC ---------------- */
+async function loadTable() {
   try {
     const f = document.getElementById("dateFrom").value;
     const t = document.getElementById("dateTo").value;
@@ -178,7 +179,8 @@ async function loadTable(){
     from.setHours(0,0,0,0);
     to.setHours(0,0,0,0);
 
-    const goalTotal = Number(document.getElementById("goalAmount").value || 0);
+    const totalGoal = Number(document.getElementById("goalAmount").value || 0);
+    const showDaily = document.getElementById("showDailyGoal").checked;
 
     const snap = await get(ref(db, `${BASE}/records`));
     const saved = snap.exists() ? snap.val() : {};
@@ -187,119 +189,94 @@ async function loadTable(){
     today.setHours(0,0,0,0);
     const todayStr = formatDateLocal(today);
 
-    // Calculate earned so far
-    let earnedUpToToday = 0;
-    let earnedPastOnly = 0;
-
+    /* 1️⃣ Pre-load all dates into an array */
+    const days = [];
     let current = new Date(from);
     while (current <= to) {
-      const ds = formatDateLocal(current);
-      const val = saved[ds];
-      const num = (val === "" || val === undefined) ? 0 : Number(val);
-
-      if (!isNaN(num)) {
-        if (ds < todayStr) {
-          earnedPastOnly += num;
-          earnedUpToToday += num;
-        }
-        if (ds === todayStr) {
-          earnedUpToToday += num;
-        }
-      }
+      days.push(formatDateLocal(current));
       current.setDate(current.getDate() + 1);
     }
 
-    const remainingGoal = Math.max(0, goalTotal - earnedUpToToday);
-
-    // Count future days
-    let futureDays = 0;
-    current = new Date(from);
-    while (current <= to) {
-      const ds = formatDateLocal(current);
-      if (ds > todayStr) futureDays++;
-      current.setDate(current.getDate() + 1);
-    }
-
-    const showDaily = document.getElementById("showDailyGoal").checked;
+    /* 2️⃣ Progressive calculation variables */
+    let remaining = totalGoal;
+    let earnedBeforeDay = 0;
 
     const tbody = document.querySelector("#ptTable tbody");
     tbody.innerHTML = "";
 
-    current = new Date(from);
-    while (current <= to) {
-      const ds = formatDateLocal(current);
-      const savedVal = saved[ds];
-      const numVal = (savedVal === "" || savedVal === undefined) ? "" : Number(savedVal);
+    for (let i = 0; i < days.length; i++) {
 
-      let dailyGoal = "-";
-      let rowClass = "";
-      let earnedCell = "";
+      const ds = days[i];
+      const isPast = ds < todayStr;
+      const isToday = ds === todayStr;
 
-      if (ds < todayStr) {
-        // past always compare to original daily goal
-        const totalDays = Math.max(1, Math.floor((to - from)/86400000) + 1);
-        const originalGoal = goalTotal / totalDays;
+      const earnedToday = saved[ds] === "" || saved[ds] === undefined
+        ? 0
+        : Number(saved[ds]);
 
-        dailyGoal = two(originalGoal);
+      /* Determine how many days left INCLUDING this one */
+      const daysLeft = days.length - i;  // includes today
 
-        if (numVal >= originalGoal) rowClass = "past-good";
-        else rowClass = "past-bad";
+      /* 3️⃣ Calculate daily goal for this day */
+      const dailyGoalRaw = daysLeft > 0 ? (remaining / daysLeft) : 0;
+      const dailyGoal = Number(dailyGoalRaw.toFixed(2));
 
-        earnedCell =
-          `<input class="amountInput" type="number" step="0.01" value="${numVal === "" ? "" : two(numVal)}" data-date="${ds}" readonly>`;
+      /* 4️⃣ Calculate what to SHOW in Daily Goal column */
+      let showGoal;
+
+      if (isPast) {
+        // past: show difference max(0)
+        showGoal = Math.max(0, dailyGoal - earnedToday).toFixed(2);
       }
-
-      else if (ds === todayStr) {
-        // today uses fully dynamic rule
-        const todayGoal =
-          futureDays >= 0
-            ? remainingGoal / (futureDays + 1)
-            : 0;
-
-        dailyGoal = two(todayGoal);
-        rowClass = "today-row";
-
-        earnedCell =
-          `<input class="amountInput" type="number" step="0.01" value="${numVal === "" ? "" : two(numVal)}" data-date="${ds}">`;
+      else if (isToday) {
+        showGoal = Math.max(0, dailyGoal - earnedToday).toFixed(2);
       }
-
       else {
-        // future uses fully dynamic recalculated daily goal
-        const futureGoal =
-          futureDays > 0
-            ? remainingGoal / futureDays
-            : 0;
-
-        dailyGoal = two(futureGoal);
-        rowClass = "future-row";
-
-        earnedCell =
-          `<input class="amountInput" type="number" step="0.01" value="${numVal === "" ? "" : two(numVal)}" data-date="${ds}">`;
+        // future: show pure daily goal (not minus earned)
+        showGoal = dailyGoal.toFixed(2);
       }
 
+      // What to show if toggle OFF?
+      let cellDailyGoal =
+        showDaily ? showGoal :
+        (isPast ? showGoal : "-");
+
+      /* 5️⃣ Determine row class (past-good, past-bad, today-row, future-row) */
+      let rowClass = "";
+      if (isPast) {
+        if (earnedToday >= dailyGoal) rowClass = "past-good";
+        else rowClass = "past-bad";
+      }
+      else if (isToday) {
+        rowClass = "today-row";
+      }
+      else {
+        rowClass = "future-row";
+      }
+
+      /* 6️⃣ Build earned input cell */
+      const earnedInput =
+        `<input class="amountInput" type="number" step="0.01"
+            value="${earnedToday === 0 ? "" : two(earnedToday)}"
+            data-date="${ds}"
+            ${isPast ? "readonly" : ""}>`;
+
+      /* Create row */
       const tr = document.createElement("tr");
       tr.className = rowClass;
       tr.innerHTML = `
         <td>${ds}</td>
-        <td>
-  ${
-    showDaily
-      ? dailyGoal              // show all daily goals when toggle is ON
-      : (ds < todayStr
-          ? dailyGoal          // past MUST always show original goal
-          : "-"                // today & future hide when toggle is OFF
-        )
-  }
-</td>
-
-        <td>${earnedCell}</td>
+        <td>${cellDailyGoal}</td>
+        <td>${earnedInput}</td>
       `;
-
       tbody.appendChild(tr);
-      current.setDate(current.getDate() + 1);
+
+      /* 7️⃣ Update remaining AFTER this day (for next loop iteration) */
+      earnedBeforeDay += earnedToday;
+      remaining = Math.max(0, totalGoal - earnedBeforeDay);
     }
 
-    // formatting
+    /* Formatting + ENTER save behavior */
     document.querySelectorAll(".amountInput").forEach(input => {
       input.addEventListener("blur", () => {
         if (input.value !== "" && !isNaN(Number(input.value)))
@@ -309,7 +286,9 @@ async function loadTable(){
       input.addEventListener("keydown", async (e) => {
         if (e.key === "Enter") {
           const date = input.dataset.date;
-          await set(ref(db, `${BASE}/records/${date}`), input.value === "" ? "" : Number(input.value));
+          await set(ref(db, `${BASE}/records/${date}`),
+            input.value === "" ? "" : Number(input.value)
+          );
           await updateSummary();
           await loadTable();
         }
@@ -317,8 +296,10 @@ async function loadTable(){
     });
 
     await updateSummary();
+
   } catch (err) { console.error(err); }
 }
+
 
 /* ---------------- SUMMARY ---------------- */
 async function updateSummary(){
@@ -363,4 +344,5 @@ window.addEventListener("load", async () => {
 </script>
 </body>
 </html>
+
 
