@@ -1,3 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Part Time Daily</title>
+<style>
+  :root{
+    --green:#2e8d47;
+    --light:#dff4e3;
+    --accent:#2c7a3f;
+    --danger:#e44545;
+    --muted:#8dcc90;
+    --bg:#f2faf3;
+  }
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);margin:0;padding:15px}
+  .container{max-width:1000px;margin:auto;background:#fff;padding:18px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.12)}
+  h2{color:var(--accent);text-align:center;margin:0 0 12px}
+  label{display:block;margin-top:10px;font-weight:bold;color:#2b7a38}
+  input[type="date"],input[type="number"]{width:100%;padding:9px;border-radius:8px;border:1px solid var(--muted);margin-top:6px;box-sizing:border-box}
+  .summary{background:var(--light);padding:12px;border-radius:10px;margin-top:12px}
+  .toggleRow{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{border:1px solid #b5dfbb;padding:8px;text-align:center}
+  th{background:#bfe6c7}
+  .amountInput{width:110px;padding:6px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .btn{flex:1;padding:10px;border-radius:8px;border:none;color:#fff;font-weight:bold;cursor:pointer}
+  .save{background:var(--green)} .back{background:#444} .settingsSave{background:#1f8dd6}
+  .past-good{background:#e8f8ed}    /* green-ish background for achieved past */
+  .past-bad{background:#ffecec}     /* red-ish background for missed past */
+  .today-row{background:#fffbea}    /* neutral highlight for today */
+  .future-row{background:transparent}
+  .small{font-size:13px;color:#333}
+  @media(max-width:480px){ .amountInput{width:90px} .controls{flex-direction:column} }
+  .mutedNote{font-size:13px;color:#666;margin-top:8px}
+</style>
+</head>
+<body>
+
+<p style="text-align:right;color:var(--accent);font-weight:bold">Logged in as: <span id="welcomeUser"></span></p>
+
+<!-- Non-module login check: sets window.CURRENT_USER early -->
+<script>
+(function(){
+  const user = localStorage.getItem("loggedInUser") || localStorage.getItem("loggedUser");
+  if (!user || (typeof user==='string' && (user.trim()==="" || user==="null" || user==="undefined"))) {
+    localStorage.removeItem("loggedInUser");
+    localStorage.removeItem("loggedUser");
+    alert("You must login first!");
+    window.location.href = "login.html";
+    return;
+  }
+  window.CURRENT_USER = user;
+  document.addEventListener("DOMContentLoaded", ()=> {
+    const el = document.getElementById("welcomeUser");
+    if (el) el.textContent = user;
+  });
+})();
+</script>
+
+<div class="container">
+  <h2>Part Time Daily Earnings</h2>
+
+  <label for="dateFrom">From:</label>
+  <input id="dateFrom" type="date">
+
+  <label for="dateTo">To:</label>
+  <input id="dateTo" type="date">
+
+  <label for="goalAmount">Goal Amount (RM):</label>
+  <input id="goalAmount" type="number" step="0.01" placeholder="Enter target">
+
+  <div class="toggleRow">
+    <input id="showDailyGoal" type="checkbox">
+    <label for="showDailyGoal" style="margin-top:0">Show Daily Goal (if checked, original daily goal will be visible for computed cells)</label>
+    <button id="btnSaveSettings" class="btn settingsSave" style="flex: none; margin-left:auto">Save Settings</button>
+  </div>
+
+  <div class="summary">
+    <p>Total Earned: RM <strong><span id="totalEarned">0.00</span></strong></p>
+    <p>Goal Amount: RM <strong><span id="goalDisplay">0.00</span></strong></p>
+    <p>Remaining: RM <strong><span id="remaining">0.00</span></strong></p>
+    <div class="mutedNote">Past rows are locked (read-only) and compare with the <strong>original daily goal</strong>. Today & future rows are editable.</div>
+  </div>
+
+  <table id="ptTable" aria-label="part-time table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Daily Goal</th>
+        <th>Earned (RM)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="controls">
+    <button id="btnSaveAll" class="btn save">Save All</button>
+    <button id="btnBack" class="btn back">Back to Home</button>
+  </div>
+</div>
+
+<!-- Module with Firebase -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
@@ -247,3 +351,5 @@ window.addEventListener("load", async () => {
   await loadTable();
 });
 </script>
+</body>
+</html>
