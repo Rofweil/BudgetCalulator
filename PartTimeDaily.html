@@ -281,7 +281,17 @@ async function loadTable(){
       tr.className = rowClass;
       tr.innerHTML = `
         <td>${ds}</td>
-        <td>${showDaily ? dailyGoal : (ds < todayStr ? dailyGoal : "-")}</td>
+        <td>
+  ${
+    showDaily
+      ? dailyGoal              // show all daily goals when toggle is ON
+      : (ds < todayStr
+          ? dailyGoal          // past MUST always show original goal
+          : "-"                // today & future hide when toggle is OFF
+        )
+  }
+</td>
+
         <td>${earnedCell}</td>
       `;
 
@@ -353,3 +363,4 @@ window.addEventListener("load", async () => {
 </script>
 </body>
 </html>
+
