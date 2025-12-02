@@ -1,295 +1,249 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Part-Time Daily Goal</title>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getDatabase, ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";
 
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #eef8f0;
-        margin: 0;
-        padding: 20px;
-    }
-
-    .container {
-        max-width: 850px;
-        margin: auto;
-        background: white;
-        padding: 25px;
-        border-radius: 14px;
-        box-shadow: 0 0 12px rgba(0,0,0,0.15);
-    }
-
-    h2 {
-        text-align: center;
-        color: #2e7d32;
-        margin-bottom: 18px;
-    }
-
-    label {
-        font-weight: bold;
-        display: block;
-        margin-top: 12px;
-        color: #1b5e20;
-    }
-
-    input[type="date"], input[type="number"] {
-        padding: 9px;
-        border-radius: 8px;
-        border: 1px solid #8dcc90;
-        margin-top: 5px;
-        margin-bottom: 15px;
-        width: 220px;
-        font-size: 15px;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 18px;
-        font-size: 15px;
-    }
-
-    th, td {
-        border: 1px solid #b5dfbb;
-        padding: 10px;
-        text-align: center;
-    }
-
-    th {
-        background: #bfe6c7;
-    }
-
-    .good { background: #d7f5d8 !important; }
-    .bad  { background: #ffd6d6 !important; }
-    .today { background: #fff7c2 !important; }
-
-    .earnedInput {
-        width: 90px;
-        padding: 6px;
-        border: 1px solid #8dcc90;
-        border-radius: 6px;
-    }
-
-    .top-buttons {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 20px;
-    }
-
-    button {
-        padding: 10px 14px;
-        border-radius: 8px;
-        border: none;
-        color: white;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .resetBtn { background: #e25252; }
-    .saveBtn  { background: #2e8d47; }
-</style>
-</head>
-<body>
-
-<div class="container">
-    <h2>Part-Time Daily Goal Tracker</h2>
-
-    <div class="top-buttons">
-        <button class="resetBtn" onclick="resetAll()">Reset All</button>
-        <button class="saveBtn" onclick="saveAll()">Save All</button>
-    </div>
-
-    <label>From Date</label>
-    <input type="date" id="dateFrom" onchange="saveDatesAndReload()">
-
-    <label>To Date</label>
-    <input type="date" id="dateTo" onchange="saveDatesAndReload()">
-
-    <label>Total Goal Amount (RM)</label>
-    <input type="number" id="totalGoal" oninput="saveGoalAndReload()">
-
-    <table id="dailyTable">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Daily Goal</th>
-                <th>Earned</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-</div>
-
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<script>
 const firebaseConfig = {
   apiKey: "AIzaSyA3q1drfYYuq0MGztqr8T6Cq42RGKmiVno",
   authDomain: "budgetcalculator-22ef5.firebaseapp.com",
   projectId: "budgetcalculator-22ef5",
   storageBucket: "budgetcalculator-22ef5.firebasestorage.app",
   messagingSenderId: "574952478496",
-  appId: "1:574952478496:web:0ac32ab61ec6b130db2945"
+  appId: "1:574952478496:web:0ac32ab61ec6b130db2945",
+  databaseURL: "https://budgetcalculator-22ef5-default-rtdb.asia-southeast1.firebasedatabase.app/"
 };
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const USER_ID = "guest_user_1";
-
-// 🔒 DAILY GOAL FREEZE
-let frozenDailyGoal = null;
-
-// ---------- GET DATE STRING ----------
-function fmt(date) {
-    const y = date.getFullYear();
-    const m = ("0" + (date.getMonth()+1)).slice(-2);
-    const d = ("0" + date.getDate()).slice(-2);
-    return `${y}-${m}-${d}`;
+const USER = window.CURRENT_USER;
+if (!USER) {
+  alert("Not logged in");
+  window.location.href = "login.html";
 }
 
-// ---------- LOAD EVERYTHING ----------
-window.onload = async function () {
+// DB base path
+const BASE = `users/${USER}/partTimeDaily`;
 
-    // Load frozen goal
-    const goalSnap = await db.ref("users/" + USER_ID + "/dailyGoal").once("value");
-    frozenDailyGoal = goalSnap.val() || null;
+function formatDateLocal(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function two(n){ return Number(n || 0).toFixed(2); }
 
-    // Load date range
-    const dateSnap = await db.ref("users/" + USER_ID + "/dailyRange").once("value");
-    if (dateSnap.val()) {
-        dateFrom.value = dateSnap.val().from || "";
-        dateTo.value = dateSnap.val().to || "";
+/* ---------------- LOAD SETTINGS ---------------- */
+async function loadSettings(){
+  try {
+    const snap = await get(ref(db, `${BASE}/settings`));
+    if (!snap.exists()) return;
+    const s = snap.val();
+    if (s.from) document.getElementById("dateFrom").value = s.from;
+    if (s.to) document.getElementById("dateTo").value = s.to;
+    if (s.goal !== undefined) document.getElementById("goalAmount").value = s.goal;
+    document.getElementById("showDailyGoal").checked = !!s.showDaily;
+  } catch (err) { console.error(err); }
+}
+
+/* ---------------- SAVE SETTINGS ---------------- */
+async function saveSettings(){
+  try {
+    await update(ref(db, `${BASE}/settings`), {
+      from: document.getElementById("dateFrom").value,
+      to: document.getElementById("dateTo").value,
+      goal: document.getElementById("goalAmount").value,
+      showDaily: document.getElementById("showDailyGoal").checked
+    });
+    await loadTable();
+    alert("Settings saved.");
+  } catch (err) { console.error(err); }
+}
+
+/* ---------------- UPDATED DAILY GOAL RULES (A) ---------------- */
+async function loadTable(){
+  try {
+    const f = document.getElementById("dateFrom").value;
+    const t = document.getElementById("dateTo").value;
+    if (!f || !t) {
+      document.querySelector("#ptTable tbody").innerHTML = "";
+      updateSummary();
+      return;
     }
 
-    // Load total goal
-    const tgSnap = await db.ref("users/" + USER_ID + "/totalGoal").once("value");
-    totalGoal.value = tgSnap.val() || "";
+    const from = new Date(f);
+    const to = new Date(t);
+    from.setHours(0,0,0,0);
+    to.setHours(0,0,0,0);
 
-    generateTable();
-};
+    const goalTotal = Number(document.getElementById("goalAmount").value || 0);
 
-// ---------- SAVE DATES ----------
-function saveDatesAndReload(){
-    db.ref("users/" + USER_ID + "/dailyRange").set({
-        from: dateFrom.value,
-        to: dateTo.value
-    });
-    generateTable();
-}
+    const snap = await get(ref(db, `${BASE}/records`));
+    const saved = snap.exists() ? snap.val() : {};
 
-// ---------- SAVE TOTAL GOAL ----------
-function saveGoalAndReload(){
-    db.ref("users/" + USER_ID + "/totalGoal").set(Number(totalGoal.value) || 0);
-    generateTable();
-}
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const todayStr = formatDateLocal(today);
 
-// ---------- SAVE PER-DAY EARNED ----------
-function saveEarned(dateStr, value) {
-    db.ref("users/" + USER_ID + "/earned/" + dateStr).set(Number(value) || 0);
-}
+    // Calculate earned so far
+    let earnedUpToToday = 0;
+    let earnedPastOnly = 0;
 
-// ---------- RESET ----------
-function resetAll(){
-    if (!confirm("Reset everything?")) return;
+    let current = new Date(from);
+    while (current <= to) {
+      const ds = formatDateLocal(current);
+      const val = saved[ds];
+      const num = (val === "" || val === undefined) ? 0 : Number(val);
 
-    db.ref("users/" + USER_ID).remove().then(() => location.reload());
-}
+      if (!isNaN(num)) {
+        if (ds < todayStr) {
+          earnedPastOnly += num;
+          earnedUpToToday += num;
+        }
+        if (ds === todayStr) {
+          earnedUpToToday += num;
+        }
+      }
+      current.setDate(current.getDate() + 1);
+    }
 
-// ---------- SAVE ALL (earned values) ----------
-function saveAll(){
-    alert("All updated!");
-}
+    const remainingGoal = Math.max(0, goalTotal - earnedUpToToday);
 
-// ---------- MAIN TABLE GENERATION ----------
-async function generateTable(){
+    // Count future days
+    let futureDays = 0;
+    current = new Date(from);
+    while (current <= to) {
+      const ds = formatDateLocal(current);
+      if (ds > todayStr) futureDays++;
+      current.setDate(current.getDate() + 1);
+    }
 
-    if (!dateFrom.value || !dateTo.value || !totalGoal.value) return;
+    const showDaily = document.getElementById("showDailyGoal").checked;
 
-    const tbody = document.querySelector("#dailyTable tbody");
+    const tbody = document.querySelector("#ptTable tbody");
     tbody.innerHTML = "";
 
-    const start = new Date(dateFrom.value);
-    const end   = new Date(dateTo.value);
+    current = new Date(from);
+    while (current <= to) {
+      const ds = formatDateLocal(current);
+      const savedVal = saved[ds];
+      const numVal = (savedVal === "" || savedVal === undefined) ? "" : Number(savedVal);
 
-    const totalGoalValue = Number(totalGoal.value);
-    const oneDay = 86400000;
+      let dailyGoal = "-";
+      let rowClass = "";
+      let earnedCell = "";
 
-    // Load earned data
-    const earnedSnap = await db.ref("users/" + USER_ID + "/earned").once("value");
-    const earnedData = earnedSnap.val() || {};
+      if (ds < todayStr) {
+        // past always compare to original daily goal
+        const totalDays = Math.max(1, Math.floor((to - from)/86400000) + 1);
+        const originalGoal = goalTotal / totalDays;
 
-    // Count days
-    let totalDays = Math.floor((end - start) / oneDay) + 1;
+        dailyGoal = two(originalGoal);
 
-    // Sum earned so far
-    let earnedSoFar = 0;
+        if (numVal >= originalGoal) rowClass = "past-good";
+        else rowClass = "past-bad";
 
-    // Loop through days
-    let index = 0;
-    for (let d = new Date(start); d <= end; d = new Date(d.getTime() + oneDay)) {
+        earnedCell =
+          `<input class="amountInput" type="number" step="0.01" value="${numVal === "" ? "" : two(numVal)}" data-date="${ds}" readonly>`;
+      }
 
-        const dateStr = fmt(d);
-        const todayStr = fmt(new Date());
+      else if (ds === todayStr) {
+        // today uses fully dynamic rule
+        const todayGoal =
+          futureDays >= 0
+            ? remainingGoal / (futureDays + 1)
+            : 0;
 
-        const earnedToday = Number(earnedData[dateStr] || 0);
-        earnedSoFar += earnedToday;
+        dailyGoal = two(todayGoal);
+        rowClass = "today-row";
 
-        let dailyGoal;
+        earnedCell =
+          `<input class="amountInput" type="number" step="0.01" value="${numVal === "" ? "" : two(numVal)}" data-date="${ds}">`;
+      }
 
-        // 🌟 FROZEN DAILY GOAL LOGIC 🌟
-        if (frozenDailyGoal !== null) {
-            dailyGoal = frozenDailyGoal;
-        } else {
-            // First-time calculation
-            const remainingGoal = totalGoalValue - earnedSoFar;
-            const remainingDays = totalDays - index;
+      else {
+        // future uses fully dynamic recalculated daily goal
+        const futureGoal =
+          futureDays > 0
+            ? remainingGoal / futureDays
+            : 0;
 
-            dailyGoal = remainingGoal / remainingDays;
+        dailyGoal = two(futureGoal);
+        rowClass = "future-row";
 
-            await db.ref("users/" + USER_ID + "/dailyGoal").set(dailyGoal);
-            frozenDailyGoal = dailyGoal;
-        }
+        earnedCell =
+          `<input class="amountInput" type="number" step="0.01" value="${numVal === "" ? "" : two(numVal)}" data-date="${ds}">`;
+      }
 
-        // Build table row
-        const tr = document.createElement("tr");
+      const tr = document.createElement("tr");
+      tr.className = rowClass;
+      tr.innerHTML = `
+        <td>${ds}</td>
+        <td>${showDaily ? dailyGoal : (ds < todayStr ? dailyGoal : "-")}</td>
+        <td>${earnedCell}</td>
+      `;
 
-        if (dateStr < todayStr)      tr.classList.add(earnedToday >= dailyGoal ? "good" : "bad");
-        else if (dateStr === todayStr) tr.classList.add("today");
-
-        const td1 = document.createElement("td");
-        td1.textContent = dateStr;
-
-        const td2 = document.createElement("td");
-        td2.textContent = dailyGoal.toFixed(2);
-
-        const td3 = document.createElement("td");
-
-        const input = document.createElement("input");
-        input.type = "number";
-        input.className = "earnedInput";
-        input.value = earnedToday || "";
-
-        if (dateStr < todayStr) {
-            input.disabled = true; // lock past days
-        }
-
-        input.oninput = () => saveEarned(dateStr, input.value);
-
-        td3.appendChild(input);
-
-        tr.appendChild(td1);
-        tr.appendChild(td2);
-        tr.appendChild(td3);
-        tbody.appendChild(tr);
-
-        index++;
+      tbody.appendChild(tr);
+      current.setDate(current.getDate() + 1);
     }
+
+    // formatting
+    document.querySelectorAll(".amountInput").forEach(input => {
+      input.addEventListener("blur", () => {
+        if (input.value !== "" && !isNaN(Number(input.value)))
+          input.value = two(Number(input.value));
+      });
+
+      input.addEventListener("keydown", async (e) => {
+        if (e.key === "Enter") {
+          const date = input.dataset.date;
+          await set(ref(db, `${BASE}/records/${date}`), input.value === "" ? "" : Number(input.value));
+          await updateSummary();
+          await loadTable();
+        }
+      });
+    });
+
+    await updateSummary();
+  } catch (err) { console.error(err); }
 }
 
+/* ---------------- SUMMARY ---------------- */
+async function updateSummary(){
+  try {
+    const snap = await get(ref(db, `${BASE}/records`));
+    const records = snap.exists() ? snap.val() : {};
+    let total = 0;
+    for (let v of Object.values(records)) {
+      if (v !== "" && !isNaN(Number(v))) total += Number(v);
+    }
+    const goal = Number(document.getElementById("goalAmount").value || 0);
+    document.getElementById("totalEarned").textContent = two(total);
+    document.getElementById("goalDisplay").textContent = two(goal);
+    document.getElementById("remaining").textContent = two(goal - total);
+  } catch (err) { console.error(err); }
+}
+
+/* ---------------- SAVE ALL ---------------- */
+async function saveAll(){
+  try {
+    const inputs = document.querySelectorAll(".amountInput");
+    const payload = {};
+    inputs.forEach(i => payload[i.dataset.date] = i.value === "" ? "" : Number(i.value));
+    await set(ref(db, `${BASE}/records`), payload);
+    await updateSummary();
+    await loadTable();
+    alert("Saved all.");
+  } catch (err) { console.error(err); }
+}
+
+/* ---------------- EVENTS ---------------- */
+document.getElementById("btnSaveAll").addEventListener("click", saveAll);
+document.getElementById("btnBack").addEventListener("click", ()=> window.location.href = "Home.html");
+document.getElementById("btnSaveSettings").addEventListener("click", saveSettings);
+document.getElementById("showDailyGoal").addEventListener("change", loadTable);
+
+/* ---------------- INITIAL ---------------- */
+window.addEventListener("load", async () => {
+  await loadSettings();
+  await loadTable();
+});
 </script>
-</body>
-</html>
