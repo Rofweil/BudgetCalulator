@@ -83,6 +83,7 @@
     <button id="btnResetHome" class="resetHome">Reset Home</button>
     <button id="btnResetAll" class="resetAll">Reset All</button>
     <button id="btnInputData" class="inputData">Input Data</button>
+    <button id="btnReport" class="resetHome" style="background:#1f8dd6">Generate Report</button>
     <button id="btnLogout" class="logoutBtn mobile-hide">Logout</button>
   </div>
 
@@ -137,6 +138,8 @@
     <tbody></tbody>
   </table>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
@@ -208,6 +211,143 @@ async function loadIncomeData(){
     totalCommit
   };
 }
+async function generateReport() {
+  const user = window.CURRENT_USER;
+  if (!user) { alert("Not logged in"); return; }
+
+  // Firebase paths
+  const base = `users/${user}`;
+
+  // Load all needed data
+  const [salarySnap, addSnap, commitSnap, ptSnap, homeDatesSnap, homeBudgetSnap] = await Promise.all([
+    get(ref(db, `${base}/salary`)),
+    get(ref(db, `${base}/additionalIncome`)),
+    get(ref(db, `${base}/commitments`)),
+    get(ref(db, `${base}/partTimeDaily/records`)),
+    get(ref(db, `${base}/homeDates`)),
+    get(ref(db, `${base}/homeBudget`))
+  ]);
+
+  const salary = Number(salarySnap.exists() ? salarySnap.val() : 0);
+  const additionalIncome = Number(addSnap.exists() ? addSnap.val() : 0);
+
+  // Part-Time Earnings
+  let ptData = [];
+  let ptTotal = 0;
+  if (ptSnap.exists()) {
+    const obj = ptSnap.val();
+    Object.entries(obj).forEach(([date, amount]) => {
+      const n = Number(amount || 0);
+      if (!isNaN(n)) {
+        ptData.push({ Date: date, Earned: n });
+        ptTotal += n;
+      }
+    });
+  }
+
+  // Commitments
+  const commitments = commitSnap.exists() ? commitSnap.val() : {};
+  let commitList = [];
+  let commitTotal = 0;
+
+  const keys = ["rent","vehicleLoan","telco","electric","water","shopee","motorcycle"];
+  keys.forEach(k => {
+    const val = Number(commitments[k] || 0);
+    if (!isNaN(val) && val !== 0) {
+      commitList.push({ Type: k, Amount: val });
+      commitTotal += val;
+    }
+  });
+
+  if (commitments.other) {
+    const others = Array.isArray(commitments.other) ? commitments.other : Object.values(commitments.other);
+    others.forEach(o => {
+      const n = Number(o.amount || 0);
+      if (!isNaN(n)) {
+        commitList.push({ Type: o.title || "Other", Amount: n });
+        commitTotal += n;
+      }
+    });
+  }
+
+  // Date Range
+  const fromDate = homeDatesSnap.exists() ? homeDatesSnap.val().from : "";
+  const toDate = homeDatesSnap.exists() ? homeDatesSnap.val().to : "";
+
+  // Home Daily Spending
+  let homeDailyList = [];
+  let totalUsed = 0;
+  if (homeBudgetSnap.exists()) {
+    const obj = homeBudgetSnap.val();
+    Object.entries(obj).forEach(([date, amount]) => {
+      const n = Number(amount || 0);
+      if (!isNaN(n)) {
+        homeDailyList.push({
+          Date: date,
+          "Budget Used": n
+        });
+        totalUsed += n;
+      }
+    });
+  }
+
+  const totalIncome = salary + additionalIncome + ptTotal;
+  const remaining = totalIncome - commitTotal - totalUsed;
+
+  // ======================
+  // CREATE WORKBOOK
+  // ======================
+  const wb = XLSX.utils.book_new();
+
+  // ----------------------
+  // SHEET 1: OVERVIEW
+  // ----------------------
+  const overviewSheet = XLSX.utils.json_to_sheet([
+    { Field: "User", Value: user },
+    { Field: "Generated On", Value: new Date().toLocaleString() },
+    { Field: "Period", Value: `${fromDate || "—"} to ${toDate || "—"}` },
+    {},
+    { Field: "Main Salary", Value: salary },
+    { Field: "Additional Income", Value: additionalIncome },
+    { Field: "Part-Time Earned", Value: ptTotal },
+    { Field: "Total Income", Value: totalIncome },
+    {},
+    { Field: "Commitments Total", Value: commitTotal },
+    { Field: "Total Spending", Value: totalUsed },
+    { Field: "Remaining Balance", Value: remaining }
+  ]);
+
+  XLSX.utils.book_append_sheet(wb, overviewSheet, "Overview");
+
+  // ----------------------
+  // SHEET 2: Commitments
+  // ----------------------
+  const commitSheet = XLSX.utils.json_to_sheet(commitList);
+  XLSX.utils.book_append_sheet(wb, commitSheet, "Commitments");
+
+  // ----------------------
+  // SHEET 3: Part-Time
+  // ----------------------
+  const ptSheet = XLSX.utils.json_to_sheet(ptData);
+  XLSX.utils.book_append_sheet(wb, ptSheet, "Part-Time Earnings");
+
+  // ----------------------
+  // SHEET 4: Home Daily Spending
+  // ----------------------
+  const homeSheet = XLSX.utils.json_to_sheet(homeDailyList);
+  XLSX.utils.book_append_sheet(wb, homeSheet, "Daily Spending");
+
+  // ----------------------
+  // DOWNLOAD
+  // ----------------------
+  const filename = `Spendli_Report_${fromDate || "noDate"}_to_${toDate || "noDate"}.xlsx`;
+  XLSX.writeFile(wb, filename);
+
+  alert("Report generated!");
+}
+
+document.getElementById("btnReport").addEventListener("click", generateReport);
+
 
 /* === Save manual edits === */
 window.saveUsedBudget = async function(dateStr,val){
