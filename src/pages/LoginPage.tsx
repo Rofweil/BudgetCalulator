@@ -1,25 +1,36 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { ref, get } from 'firebase/database';
-import { database, sha256hex } from '../lib/firebase';
-import { useAuth } from '../contexts/AuthContext';
-import { toast } from 'sonner@2.0.3';
-import { LogIn, PiggyBank } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { ref, get } from "firebase/database";
+import { database, sha256hex } from "../lib/firebase";
+import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
+import { LogIn, PiggyBank } from "lucide-react";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user, loading } = useAuth();
+
+  // 🔁 If already logged in, redirect to home
+  useEffect(() => {
+    if (!loading && user) {
+      navigate("/home", { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   const handleLogin = async () => {
+    if (submitting) return;
+
     try {
-      setLoading(true);
+      setSubmitting(true);
+
       const trimmedUsername = username.trim();
 
       if (!trimmedUsername || !password) {
-        toast.error('Please fill in both fields');
+        toast.error("Please fill in both fields");
         return;
       }
 
@@ -27,48 +38,60 @@ export default function LoginPage() {
       const snap = await get(userRef);
 
       if (!snap.exists()) {
-        toast.error('User not found');
+        toast.error("User not found");
         return;
       }
 
       const data = snap.val();
-      const hashed = await sha256hex(password);
+      const hashedPassword = await sha256hex(password);
 
-      if (hashed !== data.password) {
-        toast.error('Incorrect password');
+      if (hashedPassword !== data.password) {
+        toast.error("Incorrect password");
         return;
       }
 
+      // ✅ Save login
       login(trimmedUsername);
-      toast.success('Login successful!');
-      navigate('/home');
+
+      toast.success("Login successful!");
+      navigate("/home", { replace: true });
     } catch (error) {
       console.error(error);
-      toast.error('Login failed');
+      toast.error("Login failed. Please try again.");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
       handleLogin();
     }
   };
 
+  // ⏳ While restoring session
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-600">Checking session...</div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
-        backgroundImage: 'url(https://images.unsplash.com/photo-1691302174364-1958bc3d3ff8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaWdneSUyMGJhbmslMjBzYXZpbmdzfGVufDF8fHx8MTc2NTM4ODIwMXww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
+        backgroundImage:
+          "url(https://images.unsplash.com/photo-1691302174364-1958bc3d3ff8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
       }}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/90 via-emerald-800/85 to-green-900/90" />
-      
+
       <div className="relative z-10 bg-white p-8 rounded-2xl w-full max-w-md shadow-2xl">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mb-4">
@@ -85,9 +108,10 @@ export default function LoginPage() {
               type="text"
               placeholder="Enter your username"
               value={username}
+              disabled={submitting}
               onChange={(e) => setUsername(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-200 focus:border-emerald-500 focus:outline-none transition-colors bg-white"
+              onKeyDown={handleKeyDown}
+              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-200 focus:border-emerald-500 focus:outline-none transition-colors bg-white disabled:opacity-60"
             />
           </div>
 
@@ -97,19 +121,20 @@ export default function LoginPage() {
               type="password"
               placeholder="Enter your password"
               value={password}
+              disabled={submitting}
               onChange={(e) => setPassword(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-200 focus:border-emerald-500 focus:outline-none transition-colors bg-white"
+              onKeyDown={handleKeyDown}
+              className="w-full px-4 py-3 rounded-xl border-2 border-emerald-200 focus:border-emerald-500 focus:outline-none transition-colors bg-white disabled:opacity-60"
             />
           </div>
 
           <button
             onClick={handleLogin}
-            disabled={loading}
+            disabled={submitting}
             className="w-full py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
           >
-            {loading ? (
-              'Logging in...'
+            {submitting ? (
+              "Logging in..."
             ) : (
               <>
                 <LogIn className="w-5 h-5" />
@@ -121,8 +146,11 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Don&apos;t have an account?{' '}
-            <Link to="/signup" className="text-emerald-600 hover:text-emerald-700 font-semibold">
+            Don&apos;t have an account?{" "}
+            <Link
+              to="/signup"
+              className="text-emerald-600 hover:text-emerald-700 font-semibold"
+            >
               Sign up
             </Link>
           </p>
