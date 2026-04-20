@@ -19,7 +19,7 @@ import {
 interface DayRow {
   date: string;
   dailyGoal: string;
-  earned: number;
+  earned: string;
   isPast: boolean;
   isToday: boolean;
   isFuture: boolean;
@@ -216,7 +216,7 @@ export default function PartTimeDailyPage() {
         rows.push({
           date: ds,
           dailyGoal: cellDailyGoal,
-          earned: earnedToday,
+          earned: earnedToday === 0 ? '' : String(earnedToday),
           isPast,
           isToday,
           isFuture,
@@ -242,12 +242,14 @@ export default function PartTimeDailyPage() {
   }, [dateFrom, dateTo, goalAmount, showDailyGoal]);
 
   const handleEarnedChange = (date: string, value: string) => {
+  if (!/^\d*\.?\d*$/.test(value)) return;
+
   setTableData((prev) =>
     prev.map((row) =>
       row.date === date
         ? {
             ...row,
-            earned: value === '' ? 0 : Number(value),
+            earned: value,
           }
         : row
     )
@@ -260,7 +262,7 @@ export default function PartTimeDailyPage() {
     try {
       const payload: any = {};
       tableData.forEach((row) => {
-        payload[row.date] = row.earned === 0 ? '' : row.earned;
+        payload[row.date] = row.earned === '' ? '' : Number(row.earned);
       });
 
       await set(ref(database, `users/${user}/partTimeDaily/records`), payload);
@@ -273,7 +275,7 @@ export default function PartTimeDailyPage() {
 
   const getRowClass = (row: DayRow) => {
     if (row.isPast) {
-      return row.earned >= row.baseDaily ? 'bg-emerald-50 border-l-4 border-emerald-500' : 'bg-red-50 border-l-4 border-red-500';
+      return Number(row.earned || 0) >= row.baseDaily ? 'bg-emerald-50 border-l-4 border-emerald-500' : 'bg-red-50 border-l-4 border-red-500';
     } else if (row.isToday) {
       return 'bg-amber-50 border-l-4 border-amber-500';
     }
@@ -467,12 +469,12 @@ export default function PartTimeDailyPage() {
                     >
                       <td className="px-4 py-3 text-gray-700 flex items-center gap-2">
                         {row.isPast && (
-                          row.earned >= row.baseDaily ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                          ) : (
-                            <XCircle className="w-4 h-4 text-red-600" />
-                          )
-                        )}
+  Number(row.earned || 0) >= row.baseDaily ? (
+    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+  ) : (
+    <XCircle className="w-4 h-4 text-red-600" />
+  )
+)}
                         {row.isToday && <AlertCircle className="w-4 h-4 text-amber-600" />}
                         {row.date}
                       </td>
@@ -481,17 +483,28 @@ export default function PartTimeDailyPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <input
-                          type="number"
-                          step="0.01"
-                          value={row.earned === 0 ? '' : two(row.earned)}
-                          onChange={(e) => handleEarnedChange(row.date, e.target.value)}
-                          readOnly={row.isPast}
-                          className={`w-32 px-3 py-1.5 text-right rounded-lg border-2 ${
-                            row.isPast
-                              ? 'bg-gray-100 border-gray-200 cursor-not-allowed'
-                              : 'border-emerald-200 focus:border-emerald-500 focus:outline-none'
-                          }`}
-                        />
+  type="text"
+  value={row.earned}
+  onChange={(e) => handleEarnedChange(row.date, e.target.value)}
+  onBlur={() => {
+    setTableData((prev) =>
+      prev.map((r) =>
+        r.date === row.date
+          ? {
+              ...r,
+              earned: r.earned === '' ? '' : two(Number(r.earned)),
+            }
+          : r
+      )
+    );
+  }}
+  readOnly={row.isPast}
+  className={`w-32 px-3 py-1.5 text-right rounded-lg border-2 ${
+    row.isPast
+      ? 'bg-gray-100 border-gray-200 cursor-not-allowed'
+      : 'border-emerald-200 focus:border-emerald-500 focus:outline-none'
+  }`}
+/>
                       </td>
                     </tr>
                   ))}
