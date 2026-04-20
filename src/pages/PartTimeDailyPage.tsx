@@ -92,14 +92,129 @@ export default function PartTimeDailyPage() {
   if (!user) return;
 
   try {
-    await loadSettings();
-    await loadTable();
-    await updateSummary();
+    const settingsSnap = await get(ref(database, `users/${user}/partTimeDaily/settings`));
 
-    toast.success("Reverted to last saved data");
+    let from = '';
+    let to = '';
+    let goal = '';
+    let showDaily = false;
+
+    if (settingsSnap.exists()) {
+      const s = settingsSnap.val();
+      from = s.from || '';
+      to = s.to || '';
+      goal = s.goal !== undefined ? String(s.goal) : '';
+      showDaily = !!s.showDaily;
+    }
+
+    // restore settings to UI
+    setDateFrom(from);
+    setDateTo(to);
+    setGoalAmount(goal);
+    setShowDailyGoal(showDaily);
+
+    // load records directly
+    const recordsSnap = await get(ref(database, `users/${user}/partTimeDaily/records`));
+    const saved = recordsSnap.exists() ? recordsSnap.val() : {};
+
+    if (!from || !to) {
+      setTableData([]);
+      const total = Object.values(saved).reduce((sum: number, v: any) => {
+        return v !== '' && !isNaN(Number(v)) ? sum + Number(v) : sum;
+      }, 0);
+      setTotalEarned(total);
+      setRemaining(Number(goal || 0) - total);
+      toast.success('Reverted to last saved data');
+      return;
+    }
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    fromDate.setHours(0, 0, 0, 0);
+    toDate.setHours(0, 0, 0, 0);
+
+    const totalGoal = Number(goal || 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = formatDateLocal(today);
+
+    const days: string[] = [];
+    let current = new Date(fromDate);
+    while (current <= toDate) {
+      days.push(formatDateLocal(current));
+      current.setDate(current.getDate() + 1);
+    }
+
+    let remainingGoal = totalGoal;
+    let remainingToday: number | null = null;
+
+    const rows: DayRow[] = [];
+
+    for (let i = 0; i < days.length; i++) {
+      const ds = days[i];
+      const rowDate = new Date(ds);
+      rowDate.setHours(0, 0, 0, 0);
+
+      const isPast = ds < todayStr;
+      const isToday = ds === todayStr;
+      const isFuture = ds > todayStr;
+
+      const earnedToday = saved[ds] === '' || saved[ds] === undefined ? 0 : Number(saved[ds]);
+
+      let daysLeft: number;
+
+      if (isPast) {
+        daysLeft = Math.floor((toDate.getTime() - rowDate.getTime()) / 86400000) + 1;
+      } else if (isToday) {
+        daysLeft = Math.floor((toDate.getTime() - today.getTime()) / 86400000) + 1;
+        remainingToday = remainingGoal;
+      } else {
+        if (remainingToday === null) remainingToday = remainingGoal;
+        daysLeft = Math.floor((toDate.getTime() - today.getTime()) / 86400000);
+        if (daysLeft < 1) daysLeft = 1;
+      }
+
+      let baseDaily: number;
+      let dailyGoal: number;
+
+      if (isFuture) {
+        baseDaily = remainingToday! / daysLeft;
+        dailyGoal = baseDaily;
+      } else {
+        baseDaily = remainingGoal / daysLeft;
+        dailyGoal = baseDaily - earnedToday;
+        if (dailyGoal < 0) dailyGoal = 0;
+      }
+
+      const cellDailyGoal = showDaily ? two(dailyGoal) : isPast ? two(dailyGoal) : '-';
+
+      rows.push({
+        date: ds,
+        dailyGoal: cellDailyGoal,
+        earned: earnedToday === 0 ? '' : String(earnedToday),
+        isPast,
+        isToday,
+        isFuture,
+        baseDaily,
+      });
+
+      remainingGoal = Math.max(0, totalGoal - (totalGoal - remainingGoal + earnedToday));
+    }
+
+    setTableData(rows);
+
+    const total = Object.values(saved).reduce((sum: number, v: any) => {
+      return v !== '' && !isNaN(Number(v)) ? sum + Number(v) : sum;
+    }, 0);
+
+    setTotalEarned(total);
+    setRemaining(totalGoal - total);
+
+    toast.success('Reverted to last saved data');
   } catch (err) {
     console.error(err);
-    toast.error("Revert failed");
+    toast.error('Revert failed');
   }
 };
 
