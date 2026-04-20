@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ref, get, set, update } from 'firebase/database';
+import { ref, get, set, update, remove } from 'firebase/database';
 import { database } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner@2.0.3';
@@ -241,12 +241,18 @@ export default function PartTimeDailyPage() {
     loadTable();
   }, [dateFrom, dateTo, goalAmount, showDailyGoal]);
 
-  const handleEarnedChange = async (date: string, value: string) => {
-    if (!user) return;
-
-    await set(ref(database, `users/${user}/partTimeDaily/records/${date}`), value === '' ? '' : Number(value));
-    await loadTable();
-  };
+  const handleEarnedChange = (date: string, value: string) => {
+  setTableData((prev) =>
+    prev.map((row) =>
+      row.date === date
+        ? {
+            ...row,
+            earned: value === '' ? 0 : Number(value),
+          }
+        : row
+    )
+  );
+};
 
   const handleSaveAll = async () => {
     if (!user) return;
@@ -352,52 +358,44 @@ export default function PartTimeDailyPage() {
                 />
               </div>
             </div>
+              <div className="space-y-4">
+  <label className="flex items-center gap-2 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={showDailyGoal}
+      onChange={(e) => setShowDailyGoal(e.target.checked)}
+      className="w-5 h-5 rounded border-emerald-300 text-emerald-500 focus:ring-emerald-500"
+    />
+    <span className="text-gray-700">Show Daily Goal for future dates</span>
+  </label>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+    <div className="flex gap-2">
+      <button
+        onClick={handleRevertChanges}
+        className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl transition-colors"
+      >
+        Revert
+      </button>
 
-  <div className="flex gap-2">
+      <button
+        onClick={handleResetPartTime}
+        className="px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors"
+      >
+        Reset All
+      </button>
+    </div>
+
     <button
-      onClick={handleRevertChanges}
-      className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl transition-colors"
+      onClick={saveSettings}
+      className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-lg"
     >
-      Revert
-    </button>
-
-    <button
-      onClick={handleResetPartTime}
-      className="px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors"
-    >
-      Reset All
+      Save Settings
     </button>
   </div>
-
-  <button
-    onClick={saveSettings}
-    className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-lg"
-  >
-    Save Settings
-  </button>
-
 </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showDailyGoal}
-                  onChange={(e) => setShowDailyGoal(e.target.checked)}
-                  className="w-5 h-5 rounded border-emerald-300 text-emerald-500 focus:ring-emerald-500"
-                />
-                <span className="text-gray-700">Show Daily Goal for future dates</span>
-              </label>
-              <button
-                onClick={saveSettings}
-                className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-lg"
-              >
-                Save Settings
-              </button>
-            </div>
-          </div>
+</div>
         </div>
-
         {/* Progress Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white rounded-2xl p-6 shadow-lg border border-emerald-100">
