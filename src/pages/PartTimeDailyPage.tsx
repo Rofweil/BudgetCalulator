@@ -63,6 +63,46 @@ export default function PartTimeDailyPage() {
     }
   };
 
+  const handleResetPartTime = async () => {
+  if (!user) return;
+  if (!confirm("Reset ALL part-time daily data?")) return;
+
+  try {
+    await Promise.all([
+      remove(ref(database, `users/${user}/partTimeDaily/records`)),
+    ]);
+
+    // Reset UI state
+    setDateFrom('');
+    setDateTo('');
+    setGoalAmount('');
+    setShowDailyGoal(false);
+    setTableData([]);
+    setTotalEarned(0);
+    setRemaining(0);
+
+    toast.success("Part-time data reset");
+  } catch (err) {
+    console.error(err);
+    toast.error("Reset failed");
+  }
+};
+
+  const handleRevertChanges = async () => {
+  if (!user) return;
+
+  try {
+    await loadSettings();
+    await loadTable();
+    await updateSummary();
+
+    toast.success("Reverted to last saved data");
+  } catch (err) {
+    console.error(err);
+    toast.error("Revert failed");
+  }
+};
+
   const saveSettings = async () => {
     if (!user) return;
 
@@ -313,7 +353,32 @@ export default function PartTimeDailyPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4 pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+
+  <div className="flex gap-2">
+    <button
+      onClick={handleRevertChanges}
+      className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl transition-colors"
+    >
+      Revert
+    </button>
+
+    <button
+      onClick={handleResetPartTime}
+      className="px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors"
+    >
+      Reset All
+    </button>
+  </div>
+
+  <button
+    onClick={saveSettings}
+    className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-lg"
+  >
+    Save Settings
+  </button>
+
+</div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
