@@ -104,21 +104,31 @@ export default function PartTimeDailyPage() {
 };
 
   const saveSettings = async () => {
-    if (!user) return;
+  if (!user) return;
 
-    try {
-      await update(ref(database, `users/${user}/partTimeDaily/settings`), {
+  try {
+    const payload: Record<string, number | ''> = {};
+    tableData.forEach((row) => {
+      payload[row.date] = row.earned === '' ? '' : Number(row.earned);
+    });
+
+    await Promise.all([
+      update(ref(database, `users/${user}/partTimeDaily/settings`), {
         from: dateFrom,
         to: dateTo,
         goal: goalAmount,
         showDaily: showDailyGoal,
-      });
-      await loadTable();
-      toast.success('Settings saved');
-    } catch (err) {
-      console.error(err);
-    }
-  };
+      }),
+      set(ref(database, `users/${user}/partTimeDaily/records`), payload),
+    ]);
+
+    await loadTable();
+    toast.success('Settings and amounts saved');
+  } catch (err) {
+    console.error(err);
+    toast.error('Save failed');
+  }
+};
 
   const updateSummary = async () => {
     if (!user) return;
