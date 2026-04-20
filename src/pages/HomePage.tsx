@@ -197,20 +197,94 @@ export default function HomePage() {
   };
 
   const handleResetHome = async () => {
-    if (!user) return;
-    if (!confirm('Reset Home data?')) return;
-    await remove(ref(database, `users/${user}/homeBudget`));
-    await remove(ref(database, `users/${user}/homeDates`));
-    window.location.reload();
-  };
+  if (!user) return;
+  if (!confirm('Reset Home data?')) return;
 
-  const handleResetAll = async () => {
-    if (!user) return;
-    if (!confirm('RESET ALL USER DATA?')) return;
-    await remove(ref(database, `users/${user}`));
-    toast.success('All data cleared');
-    window.location.reload();
-  };
+  try {
+    await Promise.all([
+      remove(ref(database, `users/${user}/homeBudget`)),
+      remove(ref(database, `users/${user}/homeDates`)),
+    ]);
+
+    // reset local state without reloading
+    setDateFrom('');
+    setDateTo('');
+    setQuickInput('');
+    setRemainingNet(0);
+    setDaysLeft(0);
+    setDailyBudget(0);
+    setBudgetData([]);
+
+    // reload totals from remaining saved data
+    const { totalIncome: income, totalCommit: commit, partTimeEarned: pt } = await loadIncomeData();
+    setTotalIncome(income);
+    setTotalCommit(commit);
+    setPartTimeEarned(pt);
+    setRemainingNet(income - commit);
+
+    toast.success('Home data reset');
+  } catch (error) {
+    console.error(error);
+    toast.error('Failed to reset home data');
+  }
+};
+
+const handleResetAll = async () => {
+  if (!user) return;
+  if (!confirm('RESET ALL USER DATA?')) return;
+
+  try {
+    const userRef = ref(database, `users/${user}`);
+    const snap = await get(userRef);
+
+    if (!snap.exists()) {
+      toast.error('User not found');
+      return;
+    }
+
+    const currentData = snap.val();
+
+    // keep account password, clear app data only
+    await set(userRef, {
+      password: currentData.password || '',
+      salary: null,
+      additionalIncome: 0,
+      partTime: null,
+      commitments: {
+  rent: '',
+  vehicleLoan: '',
+  telco: '',
+  electric: '',
+  water: '',
+  shopee: '',
+  other: [],
+},
+      homeDates: {},
+      homeBudget: {},
+      partTimeDaily: {
+        settings: {},
+        records: {},
+      },
+    });
+
+    // reset page state without logout
+    setDateFrom('');
+    setDateTo('');
+    setQuickInput('');
+    setTotalIncome(0);
+    setTotalCommit(0);
+    setRemainingNet(0);
+    setDaysLeft(0);
+    setDailyBudget(0);
+    setPartTimeEarned(0);
+    setBudgetData([]);
+
+    toast.success('All app data reset');
+  } catch (error) {
+    console.error(error);
+    toast.error('Failed to reset all data');
+  }
+};
 
   const generateReport = async () => {
     if (!user) return;
