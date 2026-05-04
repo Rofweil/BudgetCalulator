@@ -4,10 +4,8 @@ import { ref, get, set, update, remove } from 'firebase/database';
 import { database } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner@2.0.3';
-import { Calendar, Target } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { 
-  Home, 
   LogOut, 
   DollarSign, 
   TrendingDown, 
@@ -17,7 +15,8 @@ import {
   RotateCcw, 
   FileSpreadsheet,
   PiggyBank,
-  Plus
+  Plus,
+  Target
 } from 'lucide-react';
 
 export default function HomePage() {
