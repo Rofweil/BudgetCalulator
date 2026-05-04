@@ -116,15 +116,33 @@ export default function HomePage() {
     setDaysLeft(dLeft);
 
     // Generate table
-    const used = usedSnap.exists() ? usedSnap.val() : {};
+    // Generate table
+const used = usedSnap.exists() ? usedSnap.val() : {};
 const todayStr = formatLocalDate(today);
-
-let leftover = 0;
-let runningBalance = remaining;
 
 const rows: Array<{ date: string; budget: number; used: string }> = [];
 
 let current = new Date(from);
+
+// total spending before today
+let usedBeforeToday = 0;
+Object.entries(used).forEach(([date, amount]: any) => {
+  if (date < todayStr) {
+    usedBeforeToday += Number(amount || 0);
+  }
+});
+
+const remainingForTodayOnward = net - usedBeforeToday;
+
+// count today until end date
+const daysFromTodayToEnd = Math.max(
+  1,
+  Math.ceil((to.getTime() - today.getTime()) / 86400000) + 1
+);
+
+const dailyFromToday = remainingForTodayOnward / daysFromTodayToEnd;
+
+let runningBalance = remainingForTodayOnward;
 
 while (current <= to) {
   const ds = formatLocalDate(current);
@@ -132,22 +150,12 @@ while (current <= to) {
 
   let show = 0;
 
-  if (calculationMode === 'fixed') {
-    // ✅ YOUR EXCEL LOGIC
-    if (ds < todayStr) {
-      show = 0;
-      leftover += base - spending;
-    } 
-    else if (ds === todayStr) {
-      show = base + leftover;
-    } 
-    else {
-      show = base;
-    }
-
+  if (ds < todayStr) {
+    show = 0;
+  } else if (calculationMode === 'fixed') {
+    show = dailyFromToday - spending;
   } else {
-    // ✅ RUNNING MODE
-    runningBalance = runningBalance + base - spending;
+    runningBalance = runningBalance - spending;
     show = runningBalance;
   }
 
