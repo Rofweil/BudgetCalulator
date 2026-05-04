@@ -117,12 +117,14 @@ export default function HomePage() {
 
     // Generate table
     const used = usedSnap.exists() ? usedSnap.val() : {};
+const todayStr = formatLocalDate(today);
+
+let leftover = 0;
+let runningBalance = remaining;
+
 const rows: Array<{ date: string; budget: number; used: string }> = [];
 
 let current = new Date(from);
-
-// for running mode
-let runningBalance = remaining;
 
 while (current <= to) {
   const ds = formatLocalDate(current);
@@ -131,10 +133,20 @@ while (current <= to) {
   let show = 0;
 
   if (calculationMode === 'fixed') {
-    // OLD behavior (your current one)
-    show = base;
+    // ✅ YOUR EXCEL LOGIC
+    if (ds < todayStr) {
+      show = 0;
+      leftover += base - spending;
+    } 
+    else if (ds === todayStr) {
+      show = base + leftover;
+    } 
+    else {
+      show = base;
+    }
+
   } else {
-    // NEW running balance logic
+    // ✅ RUNNING MODE
     runningBalance = runningBalance + base - spending;
     show = runningBalance;
   }
