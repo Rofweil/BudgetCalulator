@@ -32,6 +32,7 @@ export default function HomePage() {
   const [dailyBudget, setDailyBudget] = useState(0);
   const [partTimeEarned, setPartTimeEarned] = useState(0);
   const [budgetData, setBudgetData] = useState<Array<{ date: string; budget: number; used: string }>>([]);
+  const [calculationMode, setCalculationMode] = useState<'fixed' | 'running'>('fixed');
 
   const formatLocalDate = (d: Date) => {
     const y = d.getFullYear();
@@ -582,6 +583,22 @@ const handleResetAll = async () => {
             </button>
           </div>
         </div>
+
+        <div className="flex gap-2 mb-4">
+  <button
+    onClick={() => setCalculationMode('fixed')}
+    className={calculationMode === 'fixed' ? 'bg-blue-500 text-white px-3 py-1 rounded' : 'border px-3 py-1 rounded'}
+  >
+    Fixed Daily
+  </button>
+
+  <button
+    onClick={() => setCalculationMode('running')}
+    className={calculationMode === 'running' ? 'bg-blue-500 text-white px-3 py-1 rounded' : 'border px-3 py-1 rounded'}
+  >
+    Running Balance
+  </button>
+</div>
 
         {/* Budget Table */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-emerald-100">
