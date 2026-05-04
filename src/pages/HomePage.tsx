@@ -117,30 +117,33 @@ export default function HomePage() {
 
     // Generate table
     const used = usedSnap.exists() ? usedSnap.val() : {};
-    const todayStr = formatLocalDate(today);
-    let leftover = 0;
-    const rows: Array<{ date: string; budget: number; used: string }> = [];
+const rows: Array<{ date: string; budget: number; used: string }> = [];
 
-    let current = new Date(from);
-    while (current <= to) {
-      const ds = formatLocalDate(current);
-      let show = base;
+let current = new Date(from);
 
-      if (ds < todayStr) {
-        show = 0;
-      } else if (ds === todayStr) {
-        show = base + leftover;
-      }
+// for running mode
+let runningBalance = remaining;
 
-      const val = used[ds] !== undefined ? used[ds] : '';
-      rows.push({ date: ds, budget: show, used: val });
+while (current <= to) {
+  const ds = formatLocalDate(current);
+  const spending = Number(used[ds] || 0);
 
-      if (ds < todayStr) {
-        leftover += base - Number(used[ds] || 0);
-      }
+  let show = 0;
 
-      current.setDate(current.getDate() + 1);
-    }
+  if (calculationMode === 'fixed') {
+    // OLD behavior (your current one)
+    show = base;
+  } else {
+    // NEW running balance logic
+    runningBalance = runningBalance + base - spending;
+    show = runningBalance;
+  }
+
+  const val = used[ds] !== undefined ? used[ds] : '';
+  rows.push({ date: ds, budget: show, used: val });
+
+  current.setDate(current.getDate() + 1);
+}
 
     setBudgetData(rows);
   };
@@ -160,8 +163,8 @@ export default function HomePage() {
   }, [user]);
 
   useEffect(() => {
-    updateDashboard();
-  }, [dateFrom, dateTo]);
+  updateDashboard();
+}, [dateFrom, dateTo, calculationMode]);
 
   const handleSaveDates = async () => {
     if (!user) return;
