@@ -33,6 +33,7 @@ export default function HomePage() {
   const [partTimeEarned, setPartTimeEarned] = useState(0);
   const [budgetData, setBudgetData] = useState<Array<{ date: string; budget: number; used: string }>>([]);
   const [calculationMode, setCalculationMode] = useState<'fixed' | 'running'>('fixed');
+  const [includePartTimeDaily, setIncludePartTimeDaily] = useState(true);
 
   const formatLocalDate = (d: Date) => {
     const y = d.getFullYear();
@@ -75,13 +76,15 @@ export default function HomePage() {
       list.forEach((o: any) => (commit += Number(o.amount || 0)));
     }
 
-    return {
-      salary,
-      additional,
-      partTimeEarned: partTime,
-      totalIncome: salary + additional + partTime,
-      totalCommit: commit,
-    };
+    const includedPartTime = includePartTimeDaily ? partTime : 0;
+
+return {
+  salary,
+  additional,
+  partTimeEarned: partTime,
+  totalIncome: salary + additional + includedPartTime,
+  totalCommit: commit,
+};
   };
 
   const updateDashboard = async () => {
@@ -184,7 +187,7 @@ while (current <= to) {
 
   useEffect(() => {
   updateDashboard();
-}, [dateFrom, dateTo, calculationMode]);
+}, [dateFrom, dateTo, calculationMode, includePartTimeDaily]);
 
   const handleSaveDates = async () => {
     if (!user) return;
@@ -621,6 +624,18 @@ const handleResetAll = async () => {
   >
     Running Balance
   </button>
+</div>
+
+        <div className="mt-4 flex items-center gap-3">
+  <input
+    type="checkbox"
+    checked={includePartTimeDaily}
+    onChange={(e) => setIncludePartTimeDaily(e.target.checked)}
+    className="w-5 h-5"
+  />
+  <span className="text-sm text-emerald-800">
+    Include Part-Time Daily earned in total income
+  </span>
 </div>
 
         {/* Budget Table */}
